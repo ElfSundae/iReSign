@@ -238,6 +238,7 @@ static int waitsocket(int socket_fd, LIBSSH2_SESSION *session) {
             rc1 = libssh2_channel_read(channel, buffer, sizeof(buffer));
             if ( rc1 > 0 ) {
                 result = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
+                NSLog(@"result: %@", result);
             }
         }
         while ( rc1 > 0 );

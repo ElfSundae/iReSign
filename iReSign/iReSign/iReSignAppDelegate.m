@@ -53,13 +53,14 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         exit(0);
     }
     
-    BOOL isJB = [self isJailbroken];
+    BOOL isJB = [self hasASU];
     if (isJB == true)
     {
-        NSLog(@"isJB");
+        NSLog(@"has asu");
     } else {
-        NSLog(@"is NOT jb");
+        NSLog(@"does NOT have asu");
     }
+    
 }
 
 
@@ -668,22 +669,77 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         [statusLabel setStringValue:[NSString stringWithFormat:@"Saved %@",fileName]];
         
         [[NSFileManager defaultManager] removeItemAtPath:workingPath error:nil];
-        
-        [self enableControls];
+   
         
         NSString *result = [[codesigningResult stringByAppendingString:@"\n\n"] stringByAppendingString:verificationResult];
         NSLog(@"Codesigning result: %@",result);
         
-        [DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
-     if ([self uploadFile:finalDestination] == true)
-     {
-         NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
-       NSString *doInstall =  [self sendCommandString:runLine];
-         NSLog(@"response: %@", doInstall);
-     }
+        
+        [statusLabel setStringValue:@"Checking for AppSync unified..."];
+        
+        if ([self hasASU] == true)
+        {
+            [statusLabel setStringValue:[NSString stringWithFormat:@"Installing file %@...", fileName]];
+            
+            [DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
+            
+            [self installFile:finalDestination withCompletionBlock:^(BOOL success) {
+                
+               [self enableControls];
+                if (success == true)
+                {
+                    [statusLabel setStringValue:@"Application installed successfully!?"];
+                } else {
+                    [statusLabel setStringValue:@"Application install failed!?"];
+                }
+                
+            }];
+            
+        } else {
+            
+            [statusLabel setStringValue:@"AppSync unified not found"];
+            
+            [self enableControls];
+        }
+        
+
+        
+      
         
     }
 }
+
+- (void)installFile:(NSString *)theFile withCompletionBlock:(void(^)(BOOL success))completionBlock
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        
+        @autoreleasepool {
+            
+            BOOL success = FALSE;
+            
+            if ([self uploadFile:finalDestination] == true)
+            {
+                NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
+                NSString *doInstall =  [self sendCommandString:runLine];
+                success = true;
+                NSLog(@"response: %@", doInstall);
+            }
+            
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+         
+                    completionBlock(success);
+                
+                
+                
+            });
+            
+        }
+        
+    });
+}
+
 
 - (IBAction)browse:(id)sender {
     NSOpenPanel* openDlg = [NSOpenPanel openPanel];
@@ -897,6 +953,16 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
 }
 
 #pragma kevins additions for JB tvOS & appsync
+
+- (BOOL)hasASU
+{
+    NSString *theReturn = [self sendCommandString:@"ls /usr/bin/ | grep appinst"];
+    if (theReturn != nil)
+    { return (TRUE);
+    } else { return (FALSE);}
+    
+    return (FALSE);
+}
 
 - (BOOL)isJailbroken
 {
