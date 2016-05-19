@@ -117,13 +117,15 @@ static NSString *appleTVAddress = nil;
         @autoreleasepool {
             
             BOOL success = false;
-            int status = [self extractDeb:debFile toPath:workingPath];
-            NSString *newPath = [workingPath stringByAppendingPathComponent:@"data.tar.lzma"];
+            NSString *tmpPath = [workingPath stringByAppendingPathComponent:@"tmp"];
+            [FM createDirectoryAtPath:tmpPath withIntermediateDirectories:true attributes:nil error:nil];
+            int status = [self extractDeb:debFile toPath:tmpPath];
             
+            NSString *newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.lzma"];
             if (![FM fileExistsAtPath:newPath])
             {
                 NSLog(@"no lzma file found, looking for gz");
-                newPath = [workingPath stringByAppendingPathComponent:@"data.tar.gz"];
+                newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.gz"];
             }
             
             if ([FM fileExistsAtPath:newPath])
@@ -132,12 +134,12 @@ static NSString *appleTVAddress = nil;
                 NSString *ext = [[newPath pathExtension] lowercaseString];
                 if ([ext isEqualToString:@"lzma"])
                 {
-                    status = [self extractLZMA:newPath toPath:workingPath];
+                    status = [self extractLZMA:newPath toPath:tmpPath];
                 } else {
-                    status = [self gunZip:newPath toLocation:workingPath];
+                    status = [self gunZip:newPath toLocation:tmpPath];
                 }
                 
-                NSString *applicationDir = [workingPath stringByAppendingPathComponent:@"Applications"];
+                NSString *applicationDir = [tmpPath stringByAppendingPathComponent:@"Applications"];
                 if ([FM fileExistsAtPath:applicationDir])
                 {
                    
@@ -148,6 +150,7 @@ static NSString *appleTVAddress = nil;
                     [FM createDirectoryAtPath:tmpPayload
                   withIntermediateDirectories:true attributes:nil error:nil];
                     [FM moveItemAtPath:applicationDir toPath:[tmpPayload stringByAppendingPathComponent:theAppName] error:nil];
+                    [FM removeItemAtPath:tmpPath error:nil];
                     success = true;
                 }
                 
