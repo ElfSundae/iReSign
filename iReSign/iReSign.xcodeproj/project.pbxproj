@@ -9,6 +9,16 @@
 /* Begin PBXBuildFile section */
 		4C8EAD45185B74B90095DC6B /* IRHelpWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C8EAD44185B74B90095DC6B /* IRHelpWindow.m */; };
 		5B9E4C4C166AB3F7006D9F8F /* IRTextFieldDrag.m in Sources */ = {isa = PBXBuildFile; fileRef = 5B9E4C4B166AB3F7006D9F8F /* IRTextFieldDrag.m */; };
+		899877D31CED5CFF006A639E /* EMKeychainItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 899877CA1CED5CFF006A639E /* EMKeychainItem.m */; };
+		899877D41CED5CFF006A639E /* libssh2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877CD1CED5CFF006A639E /* libssh2.a */; };
+		899877D51CED5CFF006A639E /* ObjSSH.m in Sources */ = {isa = PBXBuildFile; fileRef = 899877D01CED5CFF006A639E /* ObjSSH.m */; };
+		899877D61CED5CFF006A639E /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = 899877D11CED5CFF006A639E /* README.md */; };
+		899877D71CED5CFF006A639E /* todo.txt in Resources */ = {isa = PBXBuildFile; fileRef = 899877D21CED5CFF006A639E /* todo.txt */; };
+		899877D91CED5E8D006A639E /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877D81CED5E8C006A639E /* Security.framework */; };
+		899877DB1CED5E9A006A639E /* libcrypto.0.9.8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DA1CED5E9A006A639E /* libcrypto.0.9.8.tbd */; };
+		899877DD1CED5EA8006A639E /* libssl.0.9.8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DC1CED5EA8006A639E /* libssl.0.9.8.tbd */; };
+		899877DF1CED60A8006A639E /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DE1CED60A8006A639E /* libz.tbd */; };
+		899877E31CEE0198006A639E /* ATVDeviceController.m in Sources */ = {isa = PBXBuildFile; fileRef = 899877E21CEE0198006A639E /* ATVDeviceController.m */; };
 		C115EE2B13815024003B9ACC /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C115EE2A13815024003B9ACC /* Cocoa.framework */; };
 		C115EE3513815024003B9ACC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C115EE3313815024003B9ACC /* InfoPlist.strings */; };
 		C115EE3813815024003B9ACC /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C115EE3713815024003B9ACC /* main.m */; };
@@ -23,6 +33,21 @@
 		4C8EAD44185B74B90095DC6B /* IRHelpWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IRHelpWindow.m; sourceTree = "<group>"; };
 		5B9E4C4A166AB3F7006D9F8F /* IRTextFieldDrag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IRTextFieldDrag.h; sourceTree = "<group>"; };
 		5B9E4C4B166AB3F7006D9F8F /* IRTextFieldDrag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IRTextFieldDrag.m; sourceTree = "<group>"; };
+		899877C91CED5CFF006A639E /* EMKeychainItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EMKeychainItem.h; sourceTree = "<group>"; };
+		899877CA1CED5CFF006A639E /* EMKeychainItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EMKeychainItem.m; sourceTree = "<group>"; };
+		899877CD1CED5CFF006A639E /* libssh2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libssh2.a; sourceTree = "<group>"; };
+		899877CE1CED5CFF006A639E /* libssh2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libssh2.h; sourceTree = "<group>"; };
+		899877CF1CED5CFF006A639E /* ObjSSH.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjSSH.h; sourceTree = "<group>"; };
+		899877D01CED5CFF006A639E /* ObjSSH.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ObjSSH.m; sourceTree = "<group>"; };
+		899877D11CED5CFF006A639E /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		899877D21CED5CFF006A639E /* todo.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = todo.txt; sourceTree = "<group>"; };
+		899877D81CED5E8C006A639E /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		899877DA1CED5E9A006A639E /* libcrypto.0.9.8.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcrypto.0.9.8.tbd; path = usr/lib/libcrypto.0.9.8.tbd; sourceTree = SDKROOT; };
+		899877DC1CED5EA8006A639E /* libssl.0.9.8.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libssl.0.9.8.tbd; path = usr/lib/libssl.0.9.8.tbd; sourceTree = SDKROOT; };
+		899877DE1CED60A8006A639E /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		899877E11CEE0198006A639E /* ATVDeviceController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ATVDeviceController.h; sourceTree = "<group>"; };
+		899877E21CEE0198006A639E /* ATVDeviceController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ATVDeviceController.m; sourceTree = "<group>"; };
+		899877E51CEE02E0006A639E /* Defines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Defines.h; sourceTree = "<group>"; };
 		C115EE2613815024003B9ACC /* iReSign.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iReSign.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C115EE2A13815024003B9ACC /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		C115EE2D13815024003B9ACC /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -46,13 +71,57 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				899877DF1CED60A8006A639E /* libz.tbd in Frameworks */,
+				899877DD1CED5EA8006A639E /* libssl.0.9.8.tbd in Frameworks */,
+				899877DB1CED5E9A006A639E /* libcrypto.0.9.8.tbd in Frameworks */,
+				899877D91CED5E8D006A639E /* Security.framework in Frameworks */,
 				C115EE2B13815024003B9ACC /* Cocoa.framework in Frameworks */,
+				899877D41CED5CFF006A639E /* libssh2.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		899877CB1CED5CFF006A639E /* ObjSSH */ = {
+			isa = PBXGroup;
+			children = (
+				899877CC1CED5CFF006A639E /* lib */,
+				899877CF1CED5CFF006A639E /* ObjSSH.h */,
+				899877D01CED5CFF006A639E /* ObjSSH.m */,
+				899877D11CED5CFF006A639E /* README.md */,
+				899877D21CED5CFF006A639E /* todo.txt */,
+			);
+			path = ObjSSH;
+			sourceTree = "<group>";
+		};
+		899877CC1CED5CFF006A639E /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				899877CD1CED5CFF006A639E /* libssh2.a */,
+				899877CE1CED5CFF006A639E /* libssh2.h */,
+			);
+			path = lib;
+			sourceTree = "<group>";
+		};
+		899877E01CEE0198006A639E /* ATVDeviceController */ = {
+			isa = PBXGroup;
+			children = (
+				899877E11CEE0198006A639E /* ATVDeviceController.h */,
+				899877E21CEE0198006A639E /* ATVDeviceController.m */,
+			);
+			path = ATVDeviceController;
+			sourceTree = "<group>";
+		};
+		899877E41CEE019F006A639E /* Keychain */ = {
+			isa = PBXGroup;
+			children = (
+				899877C91CED5CFF006A639E /* EMKeychainItem.h */,
+				899877CA1CED5CFF006A639E /* EMKeychainItem.m */,
+			);
+			name = Keychain;
+			sourceTree = "<group>";
+		};
 		C115EE1B13815023003B9ACC = {
 			isa = PBXGroup;
 			children = (
@@ -73,6 +142,10 @@
 		C115EE2913815024003B9ACC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				899877DE1CED60A8006A639E /* libz.tbd */,
+				899877DC1CED5EA8006A639E /* libssl.0.9.8.tbd */,
+				899877DA1CED5E9A006A639E /* libcrypto.0.9.8.tbd */,
+				899877D81CED5E8C006A639E /* Security.framework */,
 				C115EE2A13815024003B9ACC /* Cocoa.framework */,
 				C115EE2C13815024003B9ACC /* Other Frameworks */,
 			);
@@ -92,6 +165,9 @@
 		C115EE3013815024003B9ACC /* iReSign */ = {
 			isa = PBXGroup;
 			children = (
+				899877E41CEE019F006A639E /* Keychain */,
+				899877E01CEE0198006A639E /* ATVDeviceController */,
+				899877CB1CED5CFF006A639E /* ObjSSH */,
 				C115EE3C13815024003B9ACC /* iReSignAppDelegate.h */,
 				C115EE3D13815024003B9ACC /* iReSignAppDelegate.m */,
 				C115EE3F13815024003B9ACC /* MainMenu.xib */,
@@ -113,6 +189,7 @@
 				C115EE3313815024003B9ACC /* InfoPlist.strings */,
 				C115EE3613815024003B9ACC /* iReSign-Prefix.pch */,
 				C115EE3713815024003B9ACC /* main.m */,
+				899877E51CEE02E0006A639E /* Defines.h */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -173,6 +250,7 @@
 				C115EE4113815024003B9ACC /* MainMenu.xib in Resources */,
 				C142471F138174E500F5B51F /* ResourceRules.plist in Resources */,
 				C14247301381B75B00F5B51F /* Icon.icns in Resources */,
+				899877D71CED5CFF006A639E /* todo.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -185,8 +263,12 @@
 			files = (
 				C115EE3813815024003B9ACC /* main.m in Sources */,
 				4C8EAD45185B74B90095DC6B /* IRHelpWindow.m in Sources */,
+				899877D31CED5CFF006A639E /* EMKeychainItem.m in Sources */,
+				899877D61CED5CFF006A639E /* README.md in Sources */,
 				C115EE3E13815024003B9ACC /* iReSignAppDelegate.m in Sources */,
+				899877D51CED5CFF006A639E /* ObjSSH.m in Sources */,
 				5B9E4C4C166AB3F7006D9F8F /* IRTextFieldDrag.m in Sources */,
+				899877E31CEE0198006A639E /* ATVDeviceController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,6 +349,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -275,7 +358,11 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "iReSign/iReSign-Prefix.pch";
 				INFOPLIST_FILE = "iReSign/iReSign-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.6.8;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/iReSign/ObjSSH/lib",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -285,6 +372,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -293,7 +381,11 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "iReSign/iReSign-Prefix.pch";
 				INFOPLIST_FILE = "iReSign/iReSign-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.6.8;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/iReSign/ObjSSH/lib",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
