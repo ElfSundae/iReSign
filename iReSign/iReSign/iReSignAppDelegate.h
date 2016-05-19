@@ -26,6 +26,7 @@
     NSString *sourcePath;
     NSString *appPath;
     NSString *frameworksDirPath;
+    NSString *pluginsDirPath;
     NSString *frameworkPath;
     NSString *workingPath;
     NSString *appName;

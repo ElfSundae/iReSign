@@ -14,6 +14,15 @@ iReSign allows you to re-sign any unencrypted ipa-file with any certificate for 
 
 3. Click ReSign! and wait. The resigned file will be saved in the same folder as the original file.
 
+My Modifications
+=======
+
+I have made some minor modifications to this applications to make it more suited for my process.
+
+1. Include top shelf plugins for signing in tvOS applications
+2. Include self-signed codesign certs for AppSync niceness
+3. Include "entitlements" as another suffix that is acceptable for entitlement browsing.
+
 License
 =======
 

@@ -16,6 +16,7 @@ static NSString *kKeyBundleIDPlistiTunesArtwork     = @"softwareVersionBundleId"
 static NSString *kKeyInfoPlistApplicationProperties = @"ApplicationProperties";
 static NSString *kKeyInfoPlistApplicationPath       = @"ApplicationPath";
 static NSString *kFrameworksDirName                 = @"Frameworks";
+static NSString *kPluginsDirName                    = @"PlugIns";
 static NSString *kPayloadDirName                    = @"Payload";
 static NSString *kProductsDirName                   = @"Products";
 static NSString *kInfoPlistFilename                 = @"Info.plist";
@@ -439,6 +440,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         if ([[[file pathExtension] lowercaseString] isEqualToString:@"app"]) {
             appPath = [[workingPath stringByAppendingPathComponent:kPayloadDirName] stringByAppendingPathComponent:file];
             frameworksDirPath = [appPath stringByAppendingPathComponent:kFrameworksDirName];
+            pluginsDirPath = [appPath stringByAppendingPathComponent:kPluginsDirName];
             NSLog(@"Found %@",appPath);
             appName = file;
             if ([[NSFileManager defaultManager] fileExistsAtPath:frameworksDirPath]) {
@@ -454,6 +456,21 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
                     }
                 }
             }
+            
+            if ([[NSFileManager defaultManager] fileExistsAtPath:pluginsDirPath]) {
+                NSLog(@"Found %@",pluginsDirPath);
+                hasFrameworks = YES;
+                NSArray *pluginContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:pluginsDirPath error:nil];
+                for (NSString *pluginFile in pluginContents) {
+                    NSString *extension = [[pluginFile pathExtension] lowercaseString];
+                    if ([extension isEqualTo:@"appex"]) {
+                        frameworkPath = [pluginsDirPath stringByAppendingPathComponent:pluginFile];
+                        NSLog(@"Found %@",frameworkPath);
+                        [frameworks addObject:frameworkPath];
+                    }
+                }
+            }
+            
             [statusLabel setStringValue:[NSString stringWithFormat:@"Codesigning %@",file]];
             break;
         }
@@ -688,7 +705,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     [openDlg setCanChooseDirectories:FALSE];
     [openDlg setAllowsMultipleSelection:FALSE];
     [openDlg setAllowsOtherFileTypes:FALSE];
-    [openDlg setAllowedFileTypes:@[@"plist", @"PLIST"]];
+    [openDlg setAllowedFileTypes:@[@"plist", @"PLIST", @"entitlements"]];
     
     if ([openDlg runModal] == NSOKButton)
     {
@@ -761,7 +778,9 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     
     certTask = [[NSTask alloc] init];
     [certTask setLaunchPath:@"/usr/bin/security"];
-    [certTask setArguments:[NSArray arrayWithObjects:@"find-identity", @"-v", @"-p", @"codesigning", nil]];
+    //taking out -v allows you to codesign with self signed certs
+    [certTask setArguments:[NSArray arrayWithObjects:@"find-identity", @"-p", @"codesigning", nil]];
+    //[certTask setArguments:[NSArray arrayWithObjects:@"find-identity", @"-v", @"-p", @"codesigning", nil]];
     
     [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkCerts:) userInfo:nil repeats:TRUE];
     
