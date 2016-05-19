@@ -638,12 +638,14 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         
         zipTask = [[NSTask alloc] init];
         [zipTask setLaunchPath:@"/usr/bin/zip"];
+
         [zipTask setCurrentDirectoryPath:workingPath];
         [zipTask setArguments:[NSArray arrayWithObjects:@"-qry", destinationPath, @".", nil]];
 		
         [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkZip:) userInfo:nil repeats:TRUE];
         
         NSLog(@"Zipping %@", destinationPath);
+        finalDestination = destinationPath;
         [statusLabel setStringValue:[NSString stringWithFormat:@"Saving %@",fileName]];
         
         [zipTask launch];
@@ -663,6 +665,10 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         
         NSString *result = [[codesigningResult stringByAppendingString:@"\n\n"] stringByAppendingString:verificationResult];
         NSLog(@"Codesigning result: %@",result);
+        
+        [DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
+        [self uploadFile:finalDestination];
+        
     }
 }
 
@@ -876,5 +882,175 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     [alert setAlertStyle:style];
     [alert runModal];
 }
+
+#pragma kevins additions for JB tvOS & appsync
+
+- (NSString *)input: (NSString *)prompt defaultValue: (NSString *)defaultValue {
+    NSAlert *alert = [NSAlert alertWithMessageText: prompt
+                                     defaultButton:@"OK"
+                                   alternateButton:@"Cancel"
+                                       otherButton:nil
+                         informativeTextWithFormat:@""];
+    
+    NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 280, 24)];
+    [input setStringValue:defaultValue];
+    //[input autorelease];
+    [alert setAccessoryView:input];
+    NSInteger button = [alert runModal];
+    if (button == NSAlertDefaultReturn) {
+        [input validateEditing];
+        NSString *inputString = [input stringValue];
+        //[input autorelease];
+        return inputString;
+    } else if (button == NSAlertAlternateReturn) {
+        return nil;
+    } else {
+        
+        return nil;
+    }
+}
+
+- (NSString *)secureInput: (NSString *)prompt defaultValue: (NSString *)defaultValue {
+    NSAlert *alert = [NSAlert alertWithMessageText: prompt
+                                     defaultButton:@"OK"
+                                   alternateButton:@"Cancel"
+                                       otherButton:nil
+                         informativeTextWithFormat:@""];
+    
+    NSSecureTextField *input = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
+    [input setStringValue:defaultValue];
+
+    [alert setAccessoryView:input];
+    NSInteger button = [alert runModal];
+    if (button == NSAlertDefaultReturn) {
+        [input validateEditing];
+        NSString *inputString = [input stringValue];
+
+        return inputString;
+    } else if (button == NSAlertAlternateReturn) {
+
+        return nil;
+    } else {
+        
+        return nil;
+    }
+}
+
+- (void)addkeychainPassword:(NSString *)password
+{
+    //kSecProtocolTypeSSH
+    [EMInternetKeychainItem addInternetKeychainItemForServer:APPLE_TV_ADDRESS	withUsername:@"root" password:password path:@"/usr/bin/ssh" port:22 protocol:kSecProtocolTypeSSH];
+}
+
+- (NSString *)passwordForHost:(NSString *)ipAddress
+{
+    EMInternetKeychainItem *keychainItem = [EMInternetKeychainItem internetKeychainItemForServer:APPLE_TV_ADDRESS withUsername:@"root" path:@"/usr/bin/ssh" port:22 protocol:kSecProtocolTypeSSH];
+    //Grab the password.
+    if (keychainItem != nil)
+    {
+        //Grab the password.
+        NSString *password = keychainItem.password;
+        
+        return password;
+    }
+    
+    NSLog(@"nothing!");
+    return nil;
+    
+}
+
+- (BOOL)uploadFile:(NSString *)theFile
+{
+    NSLog(@"uploading file: %@", theFile);
+    NSError *error = nil;
+    BOOL getSession = [self connectToSSH];
+    if (getSession == FALSE)
+    {
+        NSLog(@"failed to get session!");
+        return (FALSE);
+    }
+    
+    
+    
+    BOOL uploadFile = [sshSession uploadFile:theFile to:[theFile lastPathComponent] error:&error];
+    if (error)
+    {
+        NSLog(@"ERROR!: %@", error);
+    }
+    return (uploadFile);
+    
+}
+
+- (NSString *)sendCommandString:(NSString *)theCommand
+{
+    
+    NSError *error = nil;
+    BOOL getSession = [self connectToSSH];
+    if (getSession == FALSE)
+    {
+        NSLog(@"failed to get session!");
+        return nil;
+    }
+    
+    
+    NSString *response = [sshSession execute:theCommand error:&error];
+    
+    return response;
+    
+}
+
+- (BOOL)connectToSSH
+{
+    NSError *error = nil;
+    
+    if (sshSession == nil)
+    {
+        //NSLog(@"APPLE_TV_ADDRESS: %@", APPLE_TV_ADDRESS);
+        sshSession = [ObjSSH connectToHost:APPLE_TV_ADDRESS withUsername:@"root" password:@"alpine" error:&error];
+        if (sshSession == nil)
+        {
+            NSLog(@"error: %@ get password!", error);
+            NSString *passwordForHost = [self passwordForHost:APPLE_TV_ADDRESS];
+            NSString *output = nil;
+            if (passwordForHost != nil)
+            {
+                output = passwordForHost;
+                
+            } else {
+                output = [self secureInput:@"Enter Password" defaultValue:@""];
+            }
+            
+            if ([output length] == 0)
+            {
+                NSLog(@"no password to send!! return!");
+                
+                return (FALSE);
+                
+            } else {
+                
+                [self addkeychainPassword:output];
+                
+                error = nil;
+                sshSession = [ObjSSH connectToHost:APPLE_TV_ADDRESS withUsername:@"root" password:output error:&error];
+                
+                if (error != nil)
+                {
+                    NSLog(@"error: %@ password failed!", error);	
+                    
+                    return (FALSE);
+                }
+                
+            }
+            
+            
+        }
+    }
+    if (sshSession != nil)
+        return (TRUE);
+    
+    
+    return (FALSE);
+}
+
 
 @end

@@ -9,6 +9,17 @@
 
 #import <Cocoa/Cocoa.h>
 #import "IRTextFieldDrag.h"
+#include "ObjSSH.h"
+#import "EMKeychainItem.h"
+
+#define DEFAULTS [NSUserDefaults standardUserDefaults]
+#define ATV_HOST @"appleTVHost"
+#define ATV_API  @"atvAPIVersion"
+#define ATV_OS	 @"atvOSVersion"
+#define APPLE_TV_ADDRESS [DEFAULTS stringForKey:ATV_HOST]
+#define APPLE_TV_API [DEFAULTS stringForKey:ATV_API]
+#define APPLE_TV_OS [DEFAULTS stringForKey:ATV_OS]
+#define SELECTED_VALUE [DEFAULTS stringForKey:@"selectedValue"]
 
 @interface iReSignAppDelegate : NSObject <NSApplicationDelegate> {
 @private
@@ -55,9 +66,13 @@
     NSMutableArray *certComboBoxItems;
     NSTask *certTask;
     NSArray *getCertsResult;
-    
+    ObjSSH *sshSession;
+    BOOL isSending;
+    BOOL atvAvailable;
+    NSString *finalDestination;
 }
 
+  @property (nonatomic, strong) ObjSSH *sshSession;
 @property (unsafe_unretained) IBOutlet NSWindow *window;
 
 @property (nonatomic, strong) NSString *workingPath;
