@@ -89,6 +89,130 @@ static NSString *appleTVAddress = nil;
     
 }
 
+- (int)extractDeb:(NSString *)inputFile toPath:(NSString *)theLocation
+{
+    NSTask *arTask = [[NSTask alloc] init];
+    
+    [arTask setLaunchPath:@"/usr/bin/ar"];
+    [arTask setArguments:[NSArray arrayWithObjects:@"-x", inputFile, nil]];
+    [arTask setCurrentDirectoryPath:theLocation];
+    
+    // NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
+    //[arTask setStandardError:nullOut];
+    //[arTask setStandardOutput:nullOut];
+    [arTask launch];
+    [arTask waitUntilExit];
+    
+    int theTerm = [arTask terminationStatus];
+    
+    arTask = nil;
+    return theTerm;
+    
+}
+
+- (void)processDeb:(NSString *)debFile withCompletionBlock:(void(^)(BOOL success))completionBlock
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        
+        @autoreleasepool {
+            
+            BOOL success = false;
+            int status = [self extractDeb:debFile toPath:workingPath];
+            NSString *newPath = [workingPath stringByAppendingPathComponent:@"data.tar.lzma"];
+            
+            if (![FM fileExistsAtPath:newPath])
+            {
+                NSLog(@"no lzma file found, looking for gz");
+                newPath = [workingPath stringByAppendingPathComponent:@"data.tar.gz"];
+            }
+            
+            if ([FM fileExistsAtPath:newPath])
+            {
+                //found the file keep doing stuff
+                NSString *ext = [[newPath pathExtension] lowercaseString];
+                if ([ext isEqualToString:@"lzma"])
+                {
+                    status = [self extractLZMA:newPath toPath:workingPath];
+                } else {
+                    status = [self gunZip:newPath toLocation:workingPath];
+                }
+                
+                NSString *applicationDir = [workingPath stringByAppendingPathComponent:@"Applications"];
+                if ([FM fileExistsAtPath:applicationDir])
+                {
+                   
+                    NSString *theAppName = [[FM contentsOfDirectoryAtPath:applicationDir error:nil] lastObject];
+                    applicationDir = [applicationDir stringByAppendingPathComponent:theAppName];
+                     NSLog(@"found application dir: %@", applicationDir);
+                    NSString *tmpPayload = [workingPath stringByAppendingPathComponent:@"Payload"];
+                    [FM createDirectoryAtPath:tmpPayload
+                  withIntermediateDirectories:true attributes:nil error:nil];
+                    [FM moveItemAtPath:applicationDir toPath:[tmpPayload stringByAppendingPathComponent:theAppName] error:nil];
+                    success = true;
+                }
+                
+            } else {
+                
+                  NSLog(@"no gz file found either, bail!");
+                
+            }
+            
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+               
+                completionBlock(success);
+                
+                
+                
+            });
+            
+        }
+        
+    });
+}
+
+- (int)extractLZMA:(NSString *)inputFile toPath:(NSString *)theLocation
+{
+    NSTask *tarTask = [[NSTask alloc] init];
+   // NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
+    
+    [tarTask setLaunchPath:@"/usr/bin/tar"];
+    [tarTask setArguments:[NSArray arrayWithObjects:@"-xpv", @"--lzma", @"-f", inputFile ,@"-C", theLocation, nil]];
+    //[tarTask setCurrentDirectoryPath:toLocation];
+    //[tarTask setStandardError:nullOut];
+    //[tarTask setStandardOutput:nullOut];
+    [tarTask launch];
+    [tarTask waitUntilExit];
+    
+    int theTerm = [tarTask terminationStatus];
+    
+    tarTask = nil;
+    return theTerm;
+    
+}
+
+- (int)gunZip:(NSString *)inputTar toLocation:(NSString *)toLocation
+{
+    NSLog(@"/usr/bin/tar fxpz %@ -C %@", inputTar, toLocation);
+    NSTask *tarTask = [[NSTask alloc] init];
+    //NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
+    
+    [tarTask setLaunchPath:@"/usr/bin/tar"];
+    [tarTask setArguments:[NSArray arrayWithObjects:@"-xpzv", @"-f", inputTar,@"-C", toLocation, nil]];
+    //[tarTask setCurrentDirectoryPath:toLocation];
+    //[tarTask setStandardError:nullOut];
+    //[tarTask setStandardOutput:nullOut];
+    [tarTask launch];
+    [tarTask waitUntilExit];
+    
+    int theTerm = [tarTask terminationStatus];
+    
+    tarTask = nil;
+    return theTerm;
+    
+}
+
 
 - (BOOL)hostAvailable
 {
@@ -145,9 +269,14 @@ static NSString *appleTVAddress = nil;
     sourcePath = [pathField stringValue];
     workingPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"com.appulize.iresign"];
     
+    NSArray *acceptableArray = @[@"ipa", @"xcarchive", @"deb"];
+    NSString *pathExt = [[sourcePath pathExtension] lowercaseString];
+    
     if ([certComboBox objectValue]) {
-        if (([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"ipa"]) ||
-            ([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"xcarchive"])) {
+        //if (([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"ipa"]) ||
+        //    ([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"xcarchive"])) {
+        if ([acceptableArray containsObject:pathExt]){
+      
             [self disableControls];
             
             NSLog(@"Setting up working directory in %@",workingPath);
@@ -158,7 +287,7 @@ static NSString *appleTVAddress = nil;
             
             [[NSFileManager defaultManager] createDirectoryAtPath:workingPath withIntermediateDirectories:TRUE attributes:nil error:nil];
             
-            if ([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"ipa"]) {
+            if ([pathExt isEqualToString:@"ipa"]) {
                 if (sourcePath && [sourcePath length] > 0) {
                     NSLog(@"Unzipping %@",sourcePath);
                     [statusLabel setStringValue:@"Extracting original app"];
@@ -171,6 +300,19 @@ static NSString *appleTVAddress = nil;
                 [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkUnzip:) userInfo:nil repeats:TRUE];
                 
                 [unzipTask launch];
+            } else if ([pathExt isEqualToString:@"deb"])
+            {
+                [self processDeb:sourcePath withCompletionBlock:^(BOOL success) {
+                    
+                    if (success)
+                    {
+                        [self checkUnzip:nil];
+                        NSLog(@"success?!?!?!");
+                    } else {
+                        NSLog(@"FAILLE?!?!?!");
+                    }
+                    
+                }];
             }
             else {
                 NSString* payloadPath = [workingPath stringByAppendingPathComponent:kPayloadDirName];
@@ -768,6 +910,10 @@ static NSString *appleTVAddress = nil;
             [statusLabel setStringValue:@"AppSync unified not found"];
             
             [self enableControls];
+        } else {
+            
+            [statusLabel setStringValue:@"Finished"];
+            [self enableControls];
         }
         
 
@@ -816,7 +962,7 @@ static NSString *appleTVAddress = nil;
     [openDlg setCanChooseDirectories:FALSE];
     [openDlg setAllowsMultipleSelection:FALSE];
     [openDlg setAllowsOtherFileTypes:FALSE];
-    [openDlg setAllowedFileTypes:@[@"ipa", @"IPA", @"xcarchive"]];
+    [openDlg setAllowedFileTypes:@[@"ipa", @"IPA", @"xcarchive", @"deb"]];
     
     if ([openDlg runModal] == NSOKButton)
     {

@@ -14,6 +14,7 @@
 #define DLOG_SELF DLog(@"%@ %@", self, NSStringFromSelector(_cmd))
 
 #define DEFAULTS [NSUserDefaults standardUserDefaults]
+#define FM [NSFileManager defaultManager]
 #define ATV_HOST @"appleTVHost"
 #define ATV_API  @"atvAPIVersion"
 #define ATV_OS	 @"atvOSVersion"
