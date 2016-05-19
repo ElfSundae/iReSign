@@ -892,7 +892,7 @@ static NSString *appleTVAddress = nil;
         if ([self hasASU] == true && INSTALL_ON_ATV == true)
         {
             NSLog(@"APPLE_TV_ADDRESS: %@", APPLE_TV_ADDRESS);
-            [statusLabel setStringValue:[NSString stringWithFormat:@"Installing file %@...", fileName]];
+            [statusLabel setStringValue:[NSString stringWithFormat:@"Uploading file %@...", fileName]];
             
             //[DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
             
@@ -936,10 +936,16 @@ static NSString *appleTVAddress = nil;
             
             if ([self uploadFile:finalDestination] == true)
             {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                
+                    [statusLabel setStringValue:[NSString stringWithFormat:@"Installing file %@...", fileName]];
+                    
+                });
                 NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
-                NSString *doInstall =  [self sendCommandString:runLine];
+                [self sendCommandString:runLine];
+                runLine = [NSString stringWithFormat:@"/bin/rm /var/root/%@", fileName];
+                [self sendCommandString:runLine];
                 success = true;
-                NSLog(@"response: %@", doInstall);
             }
             
             
