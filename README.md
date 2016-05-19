@@ -22,6 +22,7 @@ I have made some minor modifications to this applications to make it more suited
 1. Include top shelf plugins for signing in tvOS applications
 2. Include self-signed codesign certs for AppSync niceness
 3. Include "entitlements" as another suffix that is acceptable for entitlement browsing.
+4. Include the ability to choose an AppleTV 4 to AppSync the IPA onto. PLEASE USE FOR LEGIT PURPOSES ONLY!!!
 
 License
 =======
