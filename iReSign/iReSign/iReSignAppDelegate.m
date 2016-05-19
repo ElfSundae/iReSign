@@ -8,6 +8,7 @@
 //
 
 #import "iReSignAppDelegate.h"
+#import "ATVDeviceController.h"
 
 static NSString *kKeyPrefsBundleIDChange            = @"keyBundleIDChange";
 
@@ -22,9 +23,19 @@ static NSString *kProductsDirName                   = @"Products";
 static NSString *kInfoPlistFilename                 = @"Info.plist";
 static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
 
+@interface iReSignAppDelegate()
+
+@property (nonatomic, strong) ATVDeviceController *deviceController;
+
+@end
+
 @implementation iReSignAppDelegate
 
-@synthesize window,workingPath;
+@synthesize window,workingPath, sshSession;
+
+@synthesize deviceController;
+
+static NSString *appleTVAddress = nil;
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
@@ -53,14 +64,70 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         exit(0);
     }
     
-    BOOL isJB = [self hasASU];
-    if (isJB == true)
+    deviceController = [[ATVDeviceController alloc] init];
+    appleTVAddress = APPLE_TV_ADDRESS;
+    
+    NSLog(@"appleTVAddress: %@", appleTVAddress);
+    
+    if ([[appleTVAddress componentsSeparatedByString:@":"] count] < 2)
     {
-        NSLog(@"has asu");
-    } else {
-        NSLog(@"does NOT have asu");
+        [self resetServerSettings];
+        
     }
     
+    if (appleTVAddress != nil)
+    {
+//        if (![self hostAvailable])
+//        {
+//            NSLog(@"host not available? resetting!");
+//            [self resetServerSettings];
+//        }
+    }
+    
+    
+    
+    
+}
+
+
+- (BOOL)hostAvailable
+{
+    NSMutableURLRequest *request = [self hostAvailableRequest];
+    NSHTTPURLResponse * theResponse = nil;
+    NSError *theError = nil;
+    [NSURLConnection sendSynchronousRequest:request returningResponse:&theResponse error:&theError];
+    if (theError != nil)
+    {
+        NSLog(@"theResponse: %i theError; %@", [theResponse statusCode], theError);
+        return (FALSE);
+    }
+    
+    return (TRUE);
+    
+}
+
+- (NSMutableURLRequest *)hostAvailableRequest // theres gotta be a more elegant way to do this
+{
+    NSString *httpCommand = [NSString stringWithFormat:@"http://%@/ap", APPLE_TV_ADDRESS];
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+    [request setTimeoutInterval:2];
+    [request setURL:[NSURL URLWithString:httpCommand]];
+    [request setHTTPMethod:@"GET"];
+    [request setValue:@"text/xml" forHTTPHeaderField:@"Content-Type"];
+    [request setValue:@"X-User-Agent" forHTTPHeaderField:@"User-Agent"];
+    [request setValue:nil forHTTPHeaderField:@"X-User-Agent"];
+    return request;
+}
+
+
+
+- (void)resetServerSettings
+{
+    [DEFAULTS removeObjectForKey:@"appleTVHost"];
+    [DEFAULTS removeObjectForKey:ATV_OS];
+    [DEFAULTS removeObjectForKey:ATV_API];
+    [DEFAULTS setObject:@"Choose Apple TV" forKey:@"selectedValue"];
+    appleTVAddress = nil;
 }
 
 
@@ -677,11 +744,12 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         
         [statusLabel setStringValue:@"Checking for AppSync unified..."];
         
-        if ([self hasASU] == true)
+        if ([self hasASU] == true && INSTALL_ON_ATV == true)
         {
+            NSLog(@"APPLE_TV_ADDRESS: %@", APPLE_TV_ADDRESS);
             [statusLabel setStringValue:[NSString stringWithFormat:@"Installing file %@...", fileName]];
             
-            [DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
+            //[DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
             
             [self installFile:finalDestination withCompletionBlock:^(BOOL success) {
                 
@@ -695,7 +763,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
                 
             }];
             
-        } else {
+        } else if(INSTALL_ON_ATV == true){
             
             [statusLabel setStringValue:@"AppSync unified not found"];
             
@@ -882,7 +950,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         NSMutableArray *tempGetCertsResult = [NSMutableArray arrayWithCapacity:20];
         for (int i = 0; i <= [rawResult count] - 2; i+=2) {
             
-            NSLog(@"i:%d", i+1);
+           // NSLog(@"i:%d", i+1);
             if (rawResult.count - 1 < i + 1) {
                 // Invalid array, don't add an object to that position
             } else {
@@ -1156,6 +1224,32 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     
     
     return (FALSE);
+}
+
+- (void)showNotJailbrokenWarning
+{
+    NSAlert *alert = [NSAlert alertWithMessageText:@"This Apple TV isn't jailbroken, please jailbreak it first! Would you like to visit our web site for further assistance?"
+                                     defaultButton:@"Yes"
+                                   alternateButton:@"Cancel"
+                                       otherButton:nil
+                         informativeTextWithFormat:@""];
+    
+    NSInteger button = [alert runModal];
+    if (button == NSAlertDefaultReturn) {
+        
+        [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"http://wiki.awkwardtv.org"]];
+    }
+}
+
+- (void)showATVWarning
+{
+    NSAlert *alert = [NSAlert alertWithMessageText:@"Only the AppleTV 4 is supported"
+                                     defaultButton:@"OK"
+                                   alternateButton:nil
+                                       otherButton:nil
+                         informativeTextWithFormat:@""];
+    
+    [alert runModal];
 }
 
 
