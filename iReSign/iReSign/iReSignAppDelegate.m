@@ -52,6 +52,14 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         [self showAlertOfKind:NSCriticalAlertStyle WithTitle:@"Error" AndMessage:@"This app cannot run without the codesign utility present at /usr/bin/codesign"];
         exit(0);
     }
+    
+    BOOL isJB = [self isJailbroken];
+    if (isJB == true)
+    {
+        NSLog(@"isJB");
+    } else {
+        NSLog(@"is NOT jb");
+    }
 }
 
 
@@ -667,7 +675,12 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
         NSLog(@"Codesigning result: %@",result);
         
         [DEFAULTS setValue:@"192.168.0.4:22" forKey:ATV_HOST];
-        [self uploadFile:finalDestination];
+     if ([self uploadFile:finalDestination] == true)
+     {
+         NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
+       NSString *doInstall =  [self sendCommandString:runLine];
+         NSLog(@"response: %@", doInstall);
+     }
         
     }
 }
@@ -884,6 +897,33 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
 }
 
 #pragma kevins additions for JB tvOS & appsync
+
+- (BOOL)isJailbroken
+{
+    NSError *error = nil;
+    if (APPLE_TV_ADDRESS != nil)
+    {
+        ObjSSH *ssh = [ObjSSH connectToHost:APPLE_TV_ADDRESS withUsername:@"root" password:@"alpine" error:&error];
+        if (error)
+        {
+            NSLog(@"error: %@", [error localizedDescription]);
+            if ([[error localizedDescription] isEqualToString:@"Failed to connect"])
+            {
+                [ssh disconnect];
+
+                return (FALSE);
+            }
+            
+            [ssh disconnect];
+
+        }
+    } else {
+        return (FALSE);
+    }
+    
+    
+    return (TRUE);
+}
 
 - (NSString *)input: (NSString *)prompt defaultValue: (NSString *)defaultValue {
     NSAlert *alert = [NSAlert alertWithMessageText: prompt
