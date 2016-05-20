@@ -1224,6 +1224,10 @@ static NSString *appleTVAddress = nil;
                         dispatch_async(dispatch_get_main_queue(), ^{
                             
                             [self showAlertOfKind:NSCriticalAlertStyle WithTitle:@"Error" AndMessage:@"This debian file does not contain an arm64 binary, it will not work on tvOS"];
+                            [self enableControls];
+                            [statusLabel setStringValue:@"Ready"];
+                            
+                            
                             
                         });
                         
