@@ -31,7 +31,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
 
 @implementation iReSignAppDelegate
 
-@synthesize window,workingPath, sshSession;
+@synthesize window,workingPath, sshSession, atvAvailable, isSending;
 
 @synthesize deviceController;
 
@@ -64,7 +64,12 @@ static NSString *appleTVAddress = nil;
         exit(0);
     }
     
+    
+    //start my additions for scp / tvOS additions.
+    
+    //nsarray controller that handles available devices
     deviceController = [[ATVDeviceController alloc] init];
+    //variables that was a carry over from code i migrated this from, can probably be pruned, dont think i use it.
     appleTVAddress = APPLE_TV_ADDRESS;
     
     NSLog(@"appleTVAddress: %@", appleTVAddress);
@@ -75,187 +80,27 @@ static NSString *appleTVAddress = nil;
         
     }
     
+    
+    //this check was to make sure if we have a default address saves that its currently available..
+    //however if they arent using AirPlay or manually put in an IP address this check was bogus.
+    
+    /*
     if (appleTVAddress != nil)
     {
-//        if (![self hostAvailable])
-//        {
-//            NSLog(@"host not available? resetting!");
-//            [self resetServerSettings];
-//        }
-    }
-    
-    
-    
-    
-}
-
-- (int)extractDeb:(NSString *)inputFile toPath:(NSString *)theLocation
-{
-    NSTask *arTask = [[NSTask alloc] init];
-    
-    [arTask setLaunchPath:@"/usr/bin/ar"];
-    [arTask setArguments:[NSArray arrayWithObjects:@"-x", inputFile, nil]];
-    [arTask setCurrentDirectoryPath:theLocation];
-    
-    // NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
-    //[arTask setStandardError:nullOut];
-    //[arTask setStandardOutput:nullOut];
-    [arTask launch];
-    [arTask waitUntilExit];
-    
-    int theTerm = [arTask terminationStatus];
-    
-    arTask = nil;
-    return theTerm;
-    
-}
-
-- (void)processDeb:(NSString *)debFile withCompletionBlock:(void(^)(BOOL success))completionBlock
-{
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
         
-        @autoreleasepool {
-            
-            BOOL success = false;
-            NSString *tmpPath = [workingPath stringByAppendingPathComponent:@"tmp"];
-            [FM createDirectoryAtPath:tmpPath withIntermediateDirectories:true attributes:nil error:nil];
-            int status = [self extractDeb:debFile toPath:tmpPath];
-            
-            NSString *newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.lzma"];
-            if (![FM fileExistsAtPath:newPath])
-            {
-                NSLog(@"no lzma file found, looking for gz");
-                newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.gz"];
-            }
-            
-            if ([FM fileExistsAtPath:newPath])
-            {
-                //found the file keep doing stuff
-                NSString *ext = [[newPath pathExtension] lowercaseString];
-                if ([ext isEqualToString:@"lzma"])
-                {
-                    status = [self extractLZMA:newPath toPath:tmpPath];
-                } else {
-                    status = [self gunZip:newPath toLocation:tmpPath];
-                }
-                
-                NSString *applicationDir = [tmpPath stringByAppendingPathComponent:@"Applications"];
-                if ([FM fileExistsAtPath:applicationDir])
-                {
-                   
-                    NSString *theAppName = [[FM contentsOfDirectoryAtPath:applicationDir error:nil] lastObject];
-                    applicationDir = [applicationDir stringByAppendingPathComponent:theAppName];
-                     NSLog(@"found application dir: %@", applicationDir);
-                    NSString *tmpPayload = [workingPath stringByAppendingPathComponent:@"Payload"];
-                    [FM createDirectoryAtPath:tmpPayload
-                  withIntermediateDirectories:true attributes:nil error:nil];
-                    [FM moveItemAtPath:applicationDir toPath:[tmpPayload stringByAppendingPathComponent:theAppName] error:nil];
-                    [FM removeItemAtPath:tmpPath error:nil];
-                    success = true;
-                }
-                
-            } else {
-                
-                  NSLog(@"no gz file found either, bail!");
-                
-            }
-            
-            
-            dispatch_async(dispatch_get_main_queue(), ^{
-                
-               
-                completionBlock(success);
-                
-                
-                
-            });
-            
+        if (![self hostAvailable])
+        {
+            NSLog(@"host not available? resetting!");
+            [self resetServerSettings];
         }
         
-    });
-}
-
-- (int)extractLZMA:(NSString *)inputFile toPath:(NSString *)theLocation
-{
-    NSTask *tarTask = [[NSTask alloc] init];
-   // NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
-    
-    [tarTask setLaunchPath:@"/usr/bin/tar"];
-    [tarTask setArguments:[NSArray arrayWithObjects:@"-xpv", @"--lzma", @"-f", inputFile ,@"-C", theLocation, nil]];
-    //[tarTask setCurrentDirectoryPath:toLocation];
-    //[tarTask setStandardError:nullOut];
-    //[tarTask setStandardOutput:nullOut];
-    [tarTask launch];
-    [tarTask waitUntilExit];
-    
-    int theTerm = [tarTask terminationStatus];
-    
-    tarTask = nil;
-    return theTerm;
-    
-}
-
-- (int)gunZip:(NSString *)inputTar toLocation:(NSString *)toLocation
-{
-    NSLog(@"/usr/bin/tar fxpz %@ -C %@", inputTar, toLocation);
-    NSTask *tarTask = [[NSTask alloc] init];
-    //NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
-    
-    [tarTask setLaunchPath:@"/usr/bin/tar"];
-    [tarTask setArguments:[NSArray arrayWithObjects:@"-xpzv", @"-f", inputTar,@"-C", toLocation, nil]];
-    //[tarTask setCurrentDirectoryPath:toLocation];
-    //[tarTask setStandardError:nullOut];
-    //[tarTask setStandardOutput:nullOut];
-    [tarTask launch];
-    [tarTask waitUntilExit];
-    
-    int theTerm = [tarTask terminationStatus];
-    
-    tarTask = nil;
-    return theTerm;
-    
-}
-
-
-- (BOOL)hostAvailable
-{
-    NSMutableURLRequest *request = [self hostAvailableRequest];
-    NSHTTPURLResponse * theResponse = nil;
-    NSError *theError = nil;
-    [NSURLConnection sendSynchronousRequest:request returningResponse:&theResponse error:&theError];
-    if (theError != nil)
-    {
-        NSLog(@"theResponse: %i theError; %@", [theResponse statusCode], theError);
-        return (FALSE);
     }
+   */
     
-    return (TRUE);
+    
     
 }
 
-- (NSMutableURLRequest *)hostAvailableRequest // theres gotta be a more elegant way to do this
-{
-    NSString *httpCommand = [NSString stringWithFormat:@"http://%@/ap", APPLE_TV_ADDRESS];
-    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
-    [request setTimeoutInterval:2];
-    [request setURL:[NSURL URLWithString:httpCommand]];
-    [request setHTTPMethod:@"GET"];
-    [request setValue:@"text/xml" forHTTPHeaderField:@"Content-Type"];
-    [request setValue:@"X-User-Agent" forHTTPHeaderField:@"User-Agent"];
-    [request setValue:nil forHTTPHeaderField:@"X-User-Agent"];
-    return request;
-}
-
-
-
-- (void)resetServerSettings
-{
-    [DEFAULTS removeObjectForKey:@"appleTVHost"];
-    [DEFAULTS removeObjectForKey:ATV_OS];
-    [DEFAULTS removeObjectForKey:ATV_API];
-    [DEFAULTS setObject:@"Choose Apple TV" forKey:@"selectedValue"];
-    appleTVAddress = nil;
-}
 
 
 - (IBAction)resign:(id)sender {
@@ -276,8 +121,6 @@ static NSString *appleTVAddress = nil;
     NSString *pathExt = [[sourcePath pathExtension] lowercaseString];
     
     if ([certComboBox objectValue]) {
-        //if (([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"ipa"]) ||
-        //    ([[[sourcePath pathExtension] lowercaseString] isEqualToString:@"xcarchive"])) {
         if ([acceptableArray containsObject:pathExt]){
       
             [self disableControls];
@@ -305,6 +148,7 @@ static NSString *appleTVAddress = nil;
                 [unzipTask launch];
             } else if ([pathExt isEqualToString:@"deb"])
             {
+                NSLog(@"processing deb file: %@", sourcePath);
                 [self processDeb:sourcePath withCompletionBlock:^(BOOL success) {
                     
                     if (success)
@@ -677,6 +521,9 @@ static NSString *appleTVAddress = nil;
                     }
                 }
             }
+            
+            //bit of a kludge to make sure we sign appex topshelf plugins for tvOS is applicable
+            //just add the file to the frameworks array
             
             if ([[NSFileManager defaultManager] fileExistsAtPath:pluginsDirPath]) {
                 NSLog(@"Found %@",pluginsDirPath);
@@ -1175,7 +1022,293 @@ static NSString *appleTVAddress = nil;
     [alert runModal];
 }
 
-#pragma kevins additions for JB tvOS & appsync
+#pragma mark kevins additions for JB tvOS & appsync
+
+#pragma mark extraction methods
+
+/**
+ 
+ https://blogs.oracle.com/ksplice/entry/anatomy_of_a_debian_package
+ 
+ long story short this is an easier way to make sure dpkg-deb isnt required
+ 
+ ar -x will dump the contents of the deb file (control.tar.gz and data.tar.*)
+ 
+ from there we don't care about the control file but we DO care about the data.tar.* file
+
+ 
+ */
+
+- (int)extractDeb:(NSString *)inputFile toPath:(NSString *)theLocation
+{
+    NSTask *arTask = [[NSTask alloc] init];
+    
+    [arTask setLaunchPath:@"/usr/bin/ar"];
+    [arTask setArguments:[NSArray arrayWithObjects:@"-x", inputFile, nil]];
+    [arTask setCurrentDirectoryPath:theLocation];
+    
+    // NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
+    //[arTask setStandardError:nullOut];
+    //[arTask setStandardOutput:nullOut];
+    [arTask launch];
+    [arTask waitUntilExit];
+    
+    int theTerm = [arTask terminationStatus];
+    
+    arTask = nil;
+    return theTerm;
+    
+}
+
+/**
+ 
+ Run the app binary through lipo to make sure its arm64
+ 
+ */
+
+
+- (BOOL)applicationTVOSCompat:(NSString *)appFolder
+{
+    BOOL isCompat = false;
+    
+    NSDictionary *infoDict = [NSDictionary dictionaryWithContentsOfFile:[appFolder stringByAppendingPathComponent:@"Info.plist"]];
+    NSString *executablePath = [appFolder stringByAppendingPathComponent:infoDict[@"CFBundleExecutable"]];
+    
+    NSString *lipoInfo = [self stringReturnForTask:@"/usr/bin/lipo" withArguments:@[@"-info", executablePath]];
+    if ([lipoInfo rangeOfString:@"arm64"].location != NSNotFound)
+    {
+        isCompat = true;
+    }
+    return isCompat;
+}
+
+- (NSString *)stringReturnForTask:(NSString *)taskBinary withArguments:(NSArray *)taskArguments
+{
+    NSLog(@"%@ %@", taskBinary, [taskArguments componentsJoinedByString:@" "]);
+    NSTask *task = [[NSTask alloc] init];
+    NSPipe *pipe = [[NSPipe alloc] init];
+    NSFileHandle *handle = [pipe fileHandleForReading];
+    
+    [task setLaunchPath:taskBinary];
+    [task setArguments:taskArguments];
+    [task setStandardOutput:pipe];
+    [task setStandardError:pipe];
+    
+    [task launch];
+    
+    NSData *outData = nil;
+    NSString *temp = nil;
+    while((outData = [handle readDataToEndOfFile]) && [outData length])
+    {
+        temp = [[NSString alloc] initWithData:outData encoding:NSASCIIStringEncoding];
+        
+    }
+    [handle closeFile];
+    task = nil;
+    
+    return temp;
+    
+}
+
+- (int)extractLZMA:(NSString *)inputFile toPath:(NSString *)theLocation
+{
+    NSTask *tarTask = [[NSTask alloc] init];
+    
+    [tarTask setLaunchPath:@"/usr/bin/tar"];
+    [tarTask setArguments:[NSArray arrayWithObjects:@"-xpv", @"--lzma", @"-f", inputFile ,@"-C", theLocation, nil]];
+    // NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
+    //[tarTask setStandardError:nullOut];
+    //[tarTask setStandardOutput:nullOut];
+    [tarTask launch];
+    [tarTask waitUntilExit];
+    
+    int theTerm = [tarTask terminationStatus];
+    
+    tarTask = nil;
+    return theTerm;
+    
+}
+
+- (int)gunZip:(NSString *)inputTar toLocation:(NSString *)toLocation
+{
+    NSLog(@"/usr/bin/tar -xpzv -f %@ -C %@", inputTar, toLocation);
+    NSTask *tarTask = [[NSTask alloc] init];
+    
+    [tarTask setLaunchPath:@"/usr/bin/tar"];
+    [tarTask setArguments:[NSArray arrayWithObjects:@"-xpzv", @"-f", inputTar,@"-C", toLocation, nil]];
+    //NSFileHandle *nullOut = [NSFileHandle fileHandleWithNullDevice];
+    
+    //[tarTask setStandardError:nullOut];
+    //[tarTask setStandardOutput:nullOut];
+    [tarTask launch];
+    [tarTask waitUntilExit];
+    
+    int theTerm = [tarTask terminationStatus];
+    
+    tarTask = nil;
+    return theTerm;
+    
+}
+
+/*
+ 
+ the method called when a user selects a deb rather than an IPA or xcarchive
+ 
+ extracts the deb and moves /Applications into /Payload in workingPath if applicable
+ 
+ */
+
+- (void)processDeb:(NSString *)debFile withCompletionBlock:(void(^)(BOOL success))completionBlock
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        
+        @autoreleasepool {
+            
+            BOOL success = false;
+            
+            //make a tmp dir to deal with our dpkg file
+            NSString *tmpPath = [workingPath stringByAppendingPathComponent:@"tmp"];
+            [FM createDirectoryAtPath:tmpPath withIntermediateDirectories:true attributes:nil error:nil];
+            
+            //dump the deb
+            int status = [self extractDeb:debFile toPath:tmpPath];
+            
+            //deb files generally have a .lzma file or a .gz file, check to see which.
+            
+            NSString *newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.lzma"];
+            if (![FM fileExistsAtPath:newPath])
+            {
+                NSLog(@"no lzma file found, looking for gz");
+                newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.gz"];
+            }
+            
+            if ([FM fileExistsAtPath:newPath])
+            {
+                NSLog(@"found archive: %@", newPath);
+                NSString *ext = [[newPath pathExtension] lowercaseString];
+                if ([ext isEqualToString:@"lzma"])
+                {
+                    status = [self extractLZMA:newPath toPath:tmpPath];
+                } else {
+                    status = [self gunZip:newPath toLocation:tmpPath];
+                }
+                
+                //check to see if there is an Applications folder, otherwise this deb is useless.
+                
+                NSString *applicationDir = [tmpPath stringByAppendingPathComponent:@"Applications"];
+                if ([FM fileExistsAtPath:applicationDir])
+                {
+                    
+                    NSString *theAppName = [[FM contentsOfDirectoryAtPath:applicationDir error:nil] lastObject];
+                    applicationDir = [applicationDir stringByAppendingPathComponent:theAppName];
+                    NSLog(@"found application dir: %@", applicationDir);
+                    
+                    //idiot proofing to make sure no one tries to load older bins that arent tvOS compat.
+                    
+                    if ([self applicationTVOSCompat:applicationDir])
+                    {
+                        //create the payload folder that we will copy the Application over into
+                        NSString *tmpPayload = [workingPath stringByAppendingPathComponent:@"Payload"];
+                        [FM createDirectoryAtPath:tmpPayload
+                      withIntermediateDirectories:true attributes:nil error:nil];
+                        
+                        //move *Applications/*.app over to workingPath/Payload/*.app
+                        
+                        [FM moveItemAtPath:applicationDir toPath:[tmpPayload stringByAppendingPathComponent:theAppName] error:nil];
+                        
+                        //crucial to remove the tmp dir! EVERYTHING in workingPath gets zipped into final IPA
+                        [FM removeItemAtPath:tmpPath error:nil];
+                        success = true;
+                    } else {
+                        
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            
+                            [self showAlertOfKind:NSCriticalAlertStyle WithTitle:@"Error" AndMessage:@"This debian file does not contain an arm64 binary, it will not work on tvOS"];
+                            
+                        });
+                        
+                    }
+                    
+                 
+                }
+                
+            } else {
+                
+                NSLog(@"no gz file found either, bail!");
+                
+            }
+            
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                
+                completionBlock(success);
+                
+                
+                
+            });
+            
+        }
+        
+    });
+}
+
+//currently unused
+
+- (BOOL)hostAvailable
+{
+    NSMutableURLRequest *request = [self hostAvailableRequest];
+    NSHTTPURLResponse * theResponse = nil;
+    NSError *theError = nil;
+    NSData *returnData = [NSURLConnection sendSynchronousRequest:request returningResponse:&theResponse error:&theError];
+  //  NSString *datString = [[NSString alloc] initWithData:returnData  encoding:NSUTF8StringEncoding];
+    //NSLog(@"datString: %@", datString);
+    if (theError != nil)
+    {
+        NSLog(@"theResponse: %li theError; %@", (long)[theResponse statusCode], theError);
+        return (FALSE);
+    }
+    
+    return (TRUE);
+    
+}
+
+- (NSMutableURLRequest *)hostAvailableRequest
+{
+    /*
+     
+     was thinking this could be a valid way to check for a host, but just realized if they put in
+     an IP address manually thats because AirPlay is probably off...
+     
+     the thinking was take the ip, swap the port with airplay port and then check for server info,
+     if it returns successfully, our host is available.
+     
+     */
+    NSString *baseIP = [[APPLE_TV_ADDRESS componentsSeparatedByString:@":"] firstObject];
+    baseIP = [baseIP stringByAppendingString:@":7000"];
+    NSString *httpCommand = [NSString stringWithFormat:@"http://%@/server-info", baseIP];
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+    [request setTimeoutInterval:2];
+    [request setURL:[NSURL URLWithString:httpCommand]];
+    [request setHTTPMethod:@"GET"];
+    [request setValue:@"text/xml" forHTTPHeaderField:@"Content-Type"];
+    [request setValue:@"X-User-Agent" forHTTPHeaderField:@"User-Agent"];
+    [request setValue:nil forHTTPHeaderField:@"X-User-Agent"];
+    return request;
+}
+
+
+
+- (void)resetServerSettings
+{
+    [DEFAULTS removeObjectForKey:@"appleTVHost"];
+    [DEFAULTS removeObjectForKey:ATV_OS];
+    [DEFAULTS removeObjectForKey:ATV_API];
+    [DEFAULTS setObject:@"Choose Apple TV" forKey:@"selectedValue"];
+    appleTVAddress = nil;
+}
+
+//check to see if the AppleTV selected has AppSync unified by checking for /usr/bin/appinst
 
 - (BOOL)hasASU
 {
@@ -1186,6 +1319,8 @@ static NSString *appleTVAddress = nil;
     
     return (FALSE);
 }
+
+//even if we are using the wrong password this should still at least attempt to connect with "Failed to connect" error returned
 
 - (BOOL)isJailbroken
 {
@@ -1214,6 +1349,8 @@ static NSString *appleTVAddress = nil;
     return (TRUE);
 }
 
+//currently unused
+
 - (NSString *)input: (NSString *)prompt defaultValue: (NSString *)defaultValue {
     NSAlert *alert = [NSAlert alertWithMessageText: prompt
                                      defaultButton:@"OK"
@@ -1238,6 +1375,8 @@ static NSString *appleTVAddress = nil;
         return nil;
     }
 }
+
+//if they changed password from alpine this is used to get the proper password to connect
 
 - (NSString *)secureInput: (NSString *)prompt defaultValue: (NSString *)defaultValue {
     NSAlert *alert = [NSAlert alertWithMessageText: prompt
@@ -1265,15 +1404,19 @@ static NSString *appleTVAddress = nil;
     }
 }
 
+//add a password to the keychain for SSH
+
 - (void)addkeychainPassword:(NSString *)password
 {
     //kSecProtocolTypeSSH
     [EMInternetKeychainItem addInternetKeychainItemForServer:APPLE_TV_ADDRESS	withUsername:@"root" password:password path:@"/usr/bin/ssh" port:22 protocol:kSecProtocolTypeSSH];
 }
 
+//fetch the password from the keychain for the specified ip address
+
 - (NSString *)passwordForHost:(NSString *)ipAddress
 {
-    EMInternetKeychainItem *keychainItem = [EMInternetKeychainItem internetKeychainItemForServer:APPLE_TV_ADDRESS withUsername:@"root" path:@"/usr/bin/ssh" port:22 protocol:kSecProtocolTypeSSH];
+    EMInternetKeychainItem *keychainItem = [EMInternetKeychainItem internetKeychainItemForServer:ipAddress withUsername:@"root" path:@"/usr/bin/ssh" port:22 protocol:kSecProtocolTypeSSH];
     //Grab the password.
     if (keychainItem != nil)
     {
@@ -1288,6 +1431,8 @@ static NSString *appleTVAddress = nil;
     
 }
 
+//upload a file over SSH to the selected AppleTV
+
 - (BOOL)uploadFile:(NSString *)theFile
 {
     NSLog(@"uploading file: %@", theFile);
@@ -1299,8 +1444,6 @@ static NSString *appleTVAddress = nil;
         return (FALSE);
     }
     
-    
-    
     BOOL uploadFile = [sshSession uploadFile:theFile to:[theFile lastPathComponent] error:&error];
     if (error)
     {
@@ -1309,6 +1452,8 @@ static NSString *appleTVAddress = nil;
     return (uploadFile);
     
 }
+
+//used to send basic commands to the jailbroken AppleTV over SSH
 
 - (NSString *)sendCommandString:(NSString *)theCommand
 {
@@ -1327,6 +1472,8 @@ static NSString *appleTVAddress = nil;
     return response;
     
 }
+
+//open the SSH session
 
 - (BOOL)connectToSSH
 {
