@@ -1220,6 +1220,7 @@ static NSString *appleTVAddress = nil;
     NSDictionary *infoDict = [NSDictionary dictionaryWithContentsOfFile:[appFolder stringByAppendingPathComponent:@"Info.plist"]];
     NSString *executablePath = [appFolder stringByAppendingPathComponent:infoDict[@"CFBundleExecutable"]];
     
+    self.bundleID = infoDict[kKeyBundleIDPlistApp];
     NSString *lipoInfo = [self stringReturnForTask:@"/usr/bin/lipo" withArguments:@[@"-info", executablePath]];
     if ([lipoInfo rangeOfString:@"arm64"].location != NSNotFound)
     {
