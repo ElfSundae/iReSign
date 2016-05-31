@@ -97,8 +97,8 @@ static NSString *appleTVAddress = nil;
     }
    */
     
-    
-    
+
+  
 }
 
 
@@ -838,7 +838,7 @@ static NSString *appleTVAddress = nil;
             
             BOOL success = FALSE;
             
-            if ([self uploadFile:finalDestination] == true)
+            if ([self uploadFile:finalDestination toPath:@"/var/mobile/Documents"] == true)
             {
                 dispatch_async(dispatch_get_main_queue(), ^{
                 
@@ -854,8 +854,8 @@ static NSString *appleTVAddress = nil;
                 
                  NSString *checkResponse = [NSString stringWithFormat:@"installed %@", self.bundleID];
                 
-                NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@ 2> install.txt ; cat install.txt", fileName];
-                //NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
+                NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/mobile/Documents/%@ 2> install.txt ; cat install.txt", fileName];
+                //NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/mobile/Documents/%@", fileName];
                 
                 NSString *response =  [self sendCommandString:runLine];
           
@@ -891,7 +891,7 @@ static NSString *appleTVAddress = nil;
                     [self downloadSyslogAndShow:false];
                     
                 } else {
-                    runLine = [NSString stringWithFormat:@"/bin/rm /var/root/%@", fileName];
+                    runLine = [NSString stringWithFormat:@"/bin/rm /var/mobile/Documents/%@", fileName];
                     [self sendCommandString:runLine];
                     success = true;
                 }
@@ -1220,7 +1220,7 @@ static NSString *appleTVAddress = nil;
     NSDictionary *infoDict = [NSDictionary dictionaryWithContentsOfFile:[appFolder stringByAppendingPathComponent:@"Info.plist"]];
     NSString *executablePath = [appFolder stringByAppendingPathComponent:infoDict[@"CFBundleExecutable"]];
     
-    self.bundleID = infoDict[kKeyBundleIDPlistApp];
+   // self.bundleID = infoDict[kKeyBundleIDPlistApp];
     NSString *lipoInfo = [self stringReturnForTask:@"/usr/bin/lipo" withArguments:@[@"-info", executablePath]];
     if ([lipoInfo rangeOfString:@"arm64"].location != NSNotFound)
     {
@@ -1581,6 +1581,29 @@ static NSString *appleTVAddress = nil;
     return nil;
     
 }
+
+- (BOOL)uploadFile:(NSString *)theFile toPath:(NSString *)newPath
+{
+    NSLog(@"uploading file: %@", theFile);
+    NSError *error = nil;
+    BOOL getSession = [self connectToSSH];
+    if (getSession == FALSE)
+    {
+        NSLog(@"failed to get session!");
+        return (FALSE);
+    }
+    
+    NSString *finalPath = [newPath stringByAppendingPathComponent:[theFile lastPathComponent]];
+    
+    BOOL uploadFile = [sshSession uploadFile:theFile to:finalPath error:&error];
+    if (error)
+    {
+        NSLog(@"ERROR!: %@", error);
+    }
+    return (uploadFile);
+    
+}
+
 
 //upload a file over SSH to the selected AppleTV
 
