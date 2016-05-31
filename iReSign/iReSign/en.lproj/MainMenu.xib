@@ -68,6 +68,19 @@
                                     <action selector="orderFront:" target="xH4-Po-9Dk" id="U23-qH-JcY"/>
                                 </connections>
                             </menuItem>
+                            <menuItem isSeparatorItem="YES" id="PCQ-Ug-m1g"/>
+                            <menuItem title="Show Log Folder" id="MT3-b5-qav">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="showLogFolder:" target="494" id="7NT-xA-veD"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Show syslog" id="3BM-1I-zA3">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="checkSyslog:" target="494" id="VxI-MP-a3o"/>
+                                </connections>
+                            </menuItem>
                         </items>
                     </menu>
                 </menuItem>

@@ -63,6 +63,8 @@
     BOOL isSending;
     BOOL atvAvailable;
     NSString *finalDestination;
+
+    
 }
 
 @property (nonatomic, strong) ObjSSH *sshSession;
@@ -70,6 +72,10 @@
 @property (nonatomic, strong) NSString *workingPath;
 @property (readwrite, assign) BOOL isSending;
 @property (readwrite, assign) BOOL atvAvailable;
+@property (nonatomic, strong) NSString *bundleID;
+
+- (IBAction)checkSyslog:(id)sender;
+- (IBAction)showLogFolder:(id)sender;
 
 - (void)resetServerSettings;
 - (void)showATVWarning;

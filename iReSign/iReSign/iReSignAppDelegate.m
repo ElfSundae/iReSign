@@ -233,6 +233,10 @@ static NSString *appleTVAddress = nil;
             NSLog(@"Unzipping done");
             [statusLabel setStringValue:@"Original app extracted"];
             
+            [self _getBundleID];
+            
+            NSLog(@"bundle id: %@", self.bundleID);
+            
             if (changeBundleIDCheckbox.state == NSOnState) {
                 [self doBundleIDChange:bundleIDField.stringValue];
             }
@@ -309,6 +313,23 @@ static NSString *appleTVAddress = nil;
     }
     
     return [self changeBundleIDForFile:infoPlistPath bundleIDKey:kKeyBundleIDPlistApp newBundleID:newBundleID plistOutOptions:NSPropertyListBinaryFormat_v1_0];
+}
+
+- (void)_getBundleID
+{
+    NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[workingPath stringByAppendingPathComponent:kPayloadDirName] error:nil];
+    NSString *infoPlistPath = nil;
+    
+    for (NSString *file in dirContents) {
+        if ([[[file pathExtension] lowercaseString] isEqualToString:@"app"]) {
+            infoPlistPath = [[[workingPath stringByAppendingPathComponent:kPayloadDirName]
+                              stringByAppendingPathComponent:file]
+                             stringByAppendingPathComponent:kInfoPlistFilename];
+            NSDictionary *bundleDict = [NSDictionary dictionaryWithContentsOfFile:infoPlistPath];
+            self.bundleID = bundleDict[kKeyBundleIDPlistApp];
+            break;
+        }
+    }
 }
 
 - (BOOL)changeBundleIDForFile:(NSString *)filePath bundleIDKey:(NSString *)bundleIDKey newBundleID:(NSString *)newBundleID plistOutOptions:(NSPropertyListWriteOptions)options {
@@ -751,6 +772,8 @@ static NSString *appleTVAddress = nil;
                     [statusLabel setStringValue:@"Application installed successfully!?"];
                 } else {
                     [statusLabel setStringValue:@"Application install failed!?"];
+                    [self showFailureAlert];
+                
                 }
                 
             }];
@@ -773,6 +796,40 @@ static NSString *appleTVAddress = nil;
     }
 }
 
+- (void)showFailureAlert
+{
+    NSAlert *failAlert = [NSAlert alertWithMessageText:@"Installation failed!" defaultButton:@"Open Logs" alternateButton:@"Ignore" otherButton:nil informativeTextWithFormat:@"The installation of app bundle %@ failed, would you like to read the related error logs?", self.bundleID];
+    
+    NSString *errorLog = [[self logLocation] stringByAppendingFormat:@"/%@.log", self.bundleID];
+    NSString *syslog = [[self logLocation] stringByAppendingPathComponent:@"syslog.log"];
+    
+    NSModalResponse reponse = [failAlert runModal];
+    
+    switch (reponse) {
+        case NSModalResponseOK:
+            
+            NSLog(@"read the logs?");
+            
+            [[NSWorkspace sharedWorkspace] openFile:errorLog];
+            [[NSWorkspace sharedWorkspace] openFile:syslog];
+            
+            break;
+            
+        default:
+            break;
+    }
+}
+
+- (IBAction)checkSyslog:(id)sender
+{
+    [self downloadSyslogAndShow:true];
+}
+
+- (IBAction)showLogFolder:(id)sender
+{
+    [[NSWorkspace sharedWorkspace] selectFile:[self logLocation] inFileViewerRootedAtPath:[[self logLocation] stringByDeletingLastPathComponent]];
+}
+
 - (void)installFile:(NSString *)theFile withCompletionBlock:(void(^)(BOOL success))completionBlock
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
@@ -788,11 +845,58 @@ static NSString *appleTVAddress = nil;
                     [statusLabel setStringValue:[NSString stringWithFormat:@"Installing file %@...", fileName]];
                     
                 });
-                NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
-                [self sendCommandString:runLine];
-                runLine = [NSString stringWithFormat:@"/bin/rm /var/root/%@", fileName];
-                [self sendCommandString:runLine];
-                success = true;
+                
+             /*
+              
+              Massively kludgy but it works, for some reason when appinst runs it doesnt go to stdout (or something) so i /need/ to redirect it to a text file, then cat that text file to check for whether or not "installed <bundle_id>" exists
+              
+              */
+                
+                 NSString *checkResponse = [NSString stringWithFormat:@"installed %@", self.bundleID];
+                
+                NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@ 2> install.txt ; cat install.txt", fileName];
+                //NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/root/%@", fileName];
+                
+                NSString *response =  [self sendCommandString:runLine];
+          
+                //using rangeOfString because containsString is too new for backwards compat.
+          
+                if ([response rangeOfString:checkResponse].location == NSNotFound)
+                {
+        
+                    NSString *errorLog = [[self logLocation] stringByAppendingFormat:@"/%@.log", self.bundleID];
+                   
+                    //remove old copies
+                    if ([FM fileExistsAtPath:errorLog])
+                    {
+                        [FM removeItemAtPath:errorLog error:nil];
+                    }
+                    
+                    //the response above has a bunch of garbled text in it, download the install file "proper" to get the cleaner version
+                    
+                    BOOL downloadFile = [sshSession downloadFile:@"/var/root/install.txt" to:errorLog error:nil];
+                    if (downloadFile == false)
+                    {
+                        
+                        //if that fails for some reason write the version with the garbage at the end
+                        
+                        [response writeToFile:errorLog atomically:true encoding:NSUTF8StringEncoding error:nil];
+                        
+                    }
+                    
+                    response = [NSString stringWithContentsOfFile:errorLog encoding:NSUTF8StringEncoding error:nil];
+                    NSLog(@"INSTALLATION FAILED WITH LOG: %@", response);
+                 
+                    //grab latest relevant syslog chunk
+                    [self downloadSyslogAndShow:false];
+                    
+                } else {
+                    runLine = [NSString stringWithFormat:@"/bin/rm /var/root/%@", fileName];
+                    [self sendCommandString:runLine];
+                    success = true;
+                }
+                
+                
             }
             
             
@@ -809,6 +913,48 @@ static NSString *appleTVAddress = nil;
         
     });
 }
+
+- (NSString *)logLocation
+{
+    NSString *location = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Logs/iReSign"];
+    if (![FM fileExistsAtPath:location])
+    {
+        [FM createDirectoryAtPath:location withIntermediateDirectories:true attributes:nil error:nil];
+    }
+    return location;
+}
+
+
+
+- (BOOL)downloadSyslogAndShow:(BOOL)show
+{
+    BOOL getSession = [self connectToSSH];
+    if (getSession == FALSE)
+    {
+        NSLog(@"failed to get session!");
+        return false;
+    }
+    NSError *error = nil;
+    NSString *newSyslog = [[self logLocation] stringByAppendingPathComponent:@"syslog.log"];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:newSyslog])
+    {
+        [[NSFileManager defaultManager] removeItemAtPath:newSyslog error:nil];
+    }
+    //echo latest syslog output to a new file for downloadin..
+    [self sendCommandString:@"syslog > syslog.log"];
+    BOOL downloadFile = [sshSession downloadFile:@"/var/root/syslog.log" to:newSyslog error:&error];
+    if (downloadFile)
+    {
+        NSLog(@"File downloaded Successfully!");
+        if (show == true)
+        {
+            [[NSWorkspace sharedWorkspace] openFile:newSyslog];
+        }
+        return true;
+    }
+    return false;
+}
+
 
 
 - (IBAction)browse:(id)sender {
