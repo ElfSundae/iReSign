@@ -10,6 +10,28 @@
 #import "iReSignAppDelegate.h"
 #import "ATVDeviceController.h"
 
+@interface NSString (profileHelper)
+- (id)dictionaryFromString;
+@end
+
+@implementation NSString (profileHelper)
+
+//convert basic XML plist string from the profile and convert it into a mutable nsdictionary
+
+- (id)dictionaryFromString
+{
+    NSString *error = nil;
+    NSPropertyListFormat format;
+    NSData *theData = [self dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:YES];
+    id theDict = [NSPropertyListSerialization propertyListFromData:theData
+                                                  mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                                            format:&format
+                                                  errorDescription:&error];
+    return theDict;
+}
+
+@end
+
 static NSString *kKeyPrefsBundleIDChange            = @"keyBundleIDChange";
 
 static NSString *kKeyBundleIDPlistApp               = @"CFBundleIdentifier";
@@ -85,25 +107,77 @@ static NSString *appleTVAddress = nil;
     //however if they arent using AirPlay or manually put in an IP address this check was bogus.
     
     /*
-    if (appleTVAddress != nil)
-    {
-        
-        if (![self hostAvailable])
-        {
-            NSLog(@"host not available? resetting!");
-            [self resetServerSettings];
-        }
-        
-    }
-   */
+     if (appleTVAddress != nil)
+     {
+     
+     if (![self hostAvailable])
+     {
+     NSLog(@"host not available? resetting!");
+     [self resetServerSettings];
+     }
+     
+     }
+     */
     
+    
+    
+}
 
-  
+- (BOOL)profileMatchesCert
+{
+    NSString *provisioningProfileFile = [provisioningPathField stringValue];
+    if (provisioningProfileFile.length == 0) //
+    {
+        return YES;
+    }
+    NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
+    NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
+    NSDictionary *profileDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:provisioningProfileFile];
+    if ([profileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
+    {
+        return YES;
+    }
+    
+    return NO;
 }
 
 
-
 - (IBAction)resign:(id)sender {
+    
+    /*
+     
+     Some extra idiot proofing to make sure that the provisioning profile chosen matches the certificate chosen.
+     
+     */
+    
+    NSString *provisioningProfileFile = [provisioningPathField stringValue];
+    if (provisioningProfileFile.length > 0) //if there is no provisioning profile, likey doing the self signing path.
+    {
+        NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
+        NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
+        NSDictionary *profileDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:provisioningProfileFile];
+        DLog(@"profileDict: %@", profileDict);
+        if (![profileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
+        {
+            
+            NSAlert *mismatchAlert = [NSAlert alertWithMessageText:@"Profile/Cert Mistmatch" defaultButton:@"Select Certificate" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"The selected certificate name: '%@' does not match the certificate in the provisioning profile! '%@'", selectedItem, profileDict[@"CODE_SIGN_IDENTITY"]];
+            
+            //NSInteger index = [certComboBox indexOfItemWithObjectValue:profileDict[@"CODE_SIGN_IDENTITY"]];
+            NSModalResponse returnValue =  [mismatchAlert runModal];
+            if (returnValue == 1)
+            {
+                NSInteger index = [self comboBox:certComboBox indexOfObjectValue:profileDict[@"CODE_SIGN_IDENTITY"]];
+                if (index != NSNotFound)
+                {
+                    [certComboBox selectItemAtIndex:index];
+                } else {
+                    return;
+                }
+            }
+        }
+    }
+
+    
     //Save cert name
     [defaults setValue:[NSNumber numberWithInteger:[certComboBox indexOfSelectedItem]] forKey:@"CERT_INDEX"];
     [defaults setValue:[entitlementField stringValue] forKey:@"ENTITLEMENT_PATH"];
@@ -122,7 +196,7 @@ static NSString *appleTVAddress = nil;
     
     if ([certComboBox objectValue]) {
         if ([acceptableArray containsObject:pathExt]){
-      
+            
             [self disableControls];
             
             NSLog(@"Setting up working directory in %@",workingPath);
@@ -459,22 +533,22 @@ static NSString *appleTVAddress = nil;
     }
     
     [statusLabel setStringValue:@"Generating entitlements"];
-
+    
     if (appPath) {
         generateEntitlementsTask = [[NSTask alloc] init];
         [generateEntitlementsTask setLaunchPath:@"/usr/bin/security"];
         [generateEntitlementsTask setArguments:@[@"cms", @"-D", @"-i", provisioningPathField.stringValue]];
         [generateEntitlementsTask setCurrentDirectoryPath:workingPath];
-
+        
         [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkEntitlementsFix:) userInfo:nil repeats:TRUE];
-
+        
         NSPipe *pipe=[NSPipe pipe];
         [generateEntitlementsTask setStandardOutput:pipe];
         [generateEntitlementsTask setStandardError:pipe];
         NSFileHandle *handle = [pipe fileHandleForReading];
-
+        
         [generateEntitlementsTask launch];
-
+        
         [NSThread detachNewThreadSelector:@selector(watchEntitlements:)
                                  toTarget:self withObject:handle];
     }
@@ -664,7 +738,7 @@ static NSString *appleTVAddress = nil;
         verifyTask = [[NSTask alloc] init];
         [verifyTask setLaunchPath:@"/usr/bin/codesign"];
         [verifyTask setArguments:[NSArray arrayWithObjects:@"-v", appPath, nil]];
-		
+        
         [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkVerificationProcess:) userInfo:nil repeats:TRUE];
         
         NSLog(@"Verifying %@",appPath);
@@ -727,10 +801,10 @@ static NSString *appleTVAddress = nil;
         
         zipTask = [[NSTask alloc] init];
         [zipTask setLaunchPath:@"/usr/bin/zip"];
-
+        
         [zipTask setCurrentDirectoryPath:workingPath];
         [zipTask setArguments:[NSArray arrayWithObjects:@"-qry", destinationPath, @".", nil]];
-		
+        
         [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkZip:) userInfo:nil repeats:TRUE];
         
         NSLog(@"Zipping %@", destinationPath);
@@ -749,7 +823,7 @@ static NSString *appleTVAddress = nil;
         [statusLabel setStringValue:[NSString stringWithFormat:@"Saved %@",fileName]];
         
         [[NSFileManager defaultManager] removeItemAtPath:workingPath error:nil];
-   
+        
         
         NSString *result = [[codesigningResult stringByAppendingString:@"\n\n"] stringByAppendingString:verificationResult];
         NSLog(@"Codesigning result: %@",result);
@@ -766,14 +840,14 @@ static NSString *appleTVAddress = nil;
             
             [self installFile:finalDestination withCompletionBlock:^(BOOL success) {
                 
-               [self enableControls];
+                [self enableControls];
                 if (success == true)
                 {
                     [statusLabel setStringValue:@"Application installed successfully!?"];
                 } else {
                     [statusLabel setStringValue:@"Application install failed!?"];
                     [self showFailureAlert];
-                
+                    
                 }
                 
             }];
@@ -789,9 +863,9 @@ static NSString *appleTVAddress = nil;
             [self enableControls];
         }
         
-
         
-      
+        
+        
         
     }
 }
@@ -841,31 +915,31 @@ static NSString *appleTVAddress = nil;
             if ([self uploadFile:finalDestination toPath:@"/var/mobile/Documents"] == true)
             {
                 dispatch_async(dispatch_get_main_queue(), ^{
-                
+                    
                     [statusLabel setStringValue:[NSString stringWithFormat:@"Installing file %@...", fileName]];
                     
                 });
                 
-             /*
-              
-              Massively kludgy but it works, for some reason when appinst runs it doesnt go to stdout (or something) so i /need/ to redirect it to a text file, then cat that text file to check for whether or not "installed <bundle_id>" exists
-              
-              */
+                /*
+                 
+                 Massively kludgy but it works, for some reason when appinst runs it doesnt go to stdout (or something) so i /need/ to redirect it to a text file, then cat that text file to check for whether or not "installed <bundle_id>" exists
+                 
+                 */
                 
-                 NSString *checkResponse = [NSString stringWithFormat:@"installed %@", self.bundleID];
+                NSString *checkResponse = [NSString stringWithFormat:@"installed %@", self.bundleID];
                 
                 NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/mobile/Documents/%@ 2> install.txt ; cat install.txt", fileName];
                 //NSString *runLine = [NSString stringWithFormat:@"/usr/bin/appinst /var/mobile/Documents/%@", fileName];
                 
                 NSString *response =  [self sendCommandString:runLine];
-          
+                
                 //using rangeOfString because containsString is too new for backwards compat.
-          
+                
                 if ([response rangeOfString:checkResponse].location == NSNotFound)
                 {
-        
+                    
                     NSString *errorLog = [[self logLocation] stringByAppendingFormat:@"/%@.log", self.bundleID];
-                   
+                    
                     //remove old copies
                     if ([FM fileExistsAtPath:errorLog])
                     {
@@ -886,7 +960,7 @@ static NSString *appleTVAddress = nil;
                     
                     response = [NSString stringWithContentsOfFile:errorLog encoding:NSUTF8StringEncoding error:nil];
                     NSLog(@"INSTALLATION FAILED WITH LOG: %@", response);
-                 
+                    
                     //grab latest relevant syslog chunk
                     [self downloadSyslogAndShow:false];
                     
@@ -902,8 +976,8 @@ static NSString *appleTVAddress = nil;
             
             dispatch_async(dispatch_get_main_queue(), ^{
                 
-         
-                    completionBlock(success);
+                
+                completionBlock(success);
                 
                 
                 
@@ -1052,6 +1126,12 @@ static NSString *appleTVAddress = nil;
     return count;
 }
 
+- (NSInteger)comboBox:(NSComboBox *)aComboBox indexOfObjectValue:(NSString *)objectValue
+{
+    return [certComboBoxItems indexOfObject:objectValue];
+}
+
+
 - (id)comboBox:(NSComboBox *)aComboBox objectValueForItemAtIndex:(NSInteger)index {
     id item = nil;
     if ([aComboBox isEqual:certComboBox]) {
@@ -1098,7 +1178,7 @@ static NSString *appleTVAddress = nil;
         NSMutableArray *tempGetCertsResult = [NSMutableArray arrayWithCapacity:20];
         for (int i = 0; i <= [rawResult count] - 2; i+=2) {
             
-           // NSLog(@"i:%d", i+1);
+            // NSLog(@"i:%d", i+1);
             if (rawResult.count - 1 < i + 1) {
                 // Invalid array, don't add an object to that position
             } else {
@@ -1181,7 +1261,7 @@ static NSString *appleTVAddress = nil;
  ar -x will dump the contents of the deb file (control.tar.gz and data.tar.*)
  
  from there we don't care about the control file but we DO care about the data.tar.* file
-
+ 
  
  */
 
@@ -1220,7 +1300,7 @@ static NSString *appleTVAddress = nil;
     NSDictionary *infoDict = [NSDictionary dictionaryWithContentsOfFile:[appFolder stringByAppendingPathComponent:@"Info.plist"]];
     NSString *executablePath = [appFolder stringByAppendingPathComponent:infoDict[@"CFBundleExecutable"]];
     
-   // self.bundleID = infoDict[kKeyBundleIDPlistApp];
+    // self.bundleID = infoDict[kKeyBundleIDPlistApp];
     NSString *lipoInfo = [self stringReturnForTask:@"/usr/bin/lipo" withArguments:@[@"-info", executablePath]];
     if ([lipoInfo rangeOfString:@"arm64"].location != NSNotFound)
     {
@@ -1380,7 +1460,7 @@ static NSString *appleTVAddress = nil;
                         
                     }
                     
-                 
+                    
                 }
                 
             } else {
@@ -1412,7 +1492,7 @@ static NSString *appleTVAddress = nil;
     NSHTTPURLResponse * theResponse = nil;
     NSError *theError = nil;
     NSData *returnData = [NSURLConnection sendSynchronousRequest:request returningResponse:&theResponse error:&theError];
-  //  NSString *datString = [[NSString alloc] initWithData:returnData  encoding:NSUTF8StringEncoding];
+    //  NSString *datString = [[NSString alloc] initWithData:returnData  encoding:NSUTF8StringEncoding];
     //NSLog(@"datString: %@", datString);
     if (theError != nil)
     {
@@ -1485,12 +1565,12 @@ static NSString *appleTVAddress = nil;
             if ([[error localizedDescription] isEqualToString:@"Failed to connect"])
             {
                 [ssh disconnect];
-
+                
                 return (FALSE);
             }
             
             [ssh disconnect];
-
+            
         }
     } else {
         return (FALSE);
@@ -1538,16 +1618,16 @@ static NSString *appleTVAddress = nil;
     
     NSSecureTextField *input = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
     [input setStringValue:defaultValue];
-
+    
     [alert setAccessoryView:input];
     NSInteger button = [alert runModal];
     if (button == NSAlertDefaultReturn) {
         [input validateEditing];
         NSString *inputString = [input stringValue];
-
+        
         return inputString;
     } else if (button == NSAlertAlternateReturn) {
-
+        
         return nil;
     } else {
         
@@ -1685,7 +1765,7 @@ static NSString *appleTVAddress = nil;
                 
                 if (error != nil)
                 {
-                    NSLog(@"error: %@ password failed!", error);	
+                    NSLog(@"error: %@ password failed!", error);
                     
                     return (FALSE);
                 }
@@ -1726,6 +1806,164 @@ static NSString *appleTVAddress = nil;
                          informativeTextWithFormat:@""];
     
     [alert runModal];
+}
+
+
++ (NSArray *)certIDsFromCerts:(NSArray *)devCerts
+{
+    NSMutableArray *certIDs = [NSMutableArray new];
+    
+    for (NSData *devCert in devCerts)
+    {
+        //the origin offset of iPhone Developer: / iPhone Distribution / 3rd Party Mac Developer Application: appears to be the same in ever raw cert
+        //we grab way too much data on purpose since we have no idea how long the names appended will be.
+        NSData *userData = [devCert subdataWithRange:NSMakeRange(0x00109, 100)];
+        
+        NSString *stringData = [[NSString alloc] initWithData:userData encoding:NSASCIIStringEncoding];
+        //grab all the way up to ), split, grab first object, readd ) could probably do a range of string thing here too.. this works tho.
+        NSString *devName = [[[stringData componentsSeparatedByString:@")"] firstObject] stringByAppendingString:@")"];
+        if (![certIDs containsObject:devName]) //dont add any repeats
+        {
+            [certIDs addObject:devName];
+        }
+    }
+    return certIDs;
+}
+
++ (NSMutableDictionary *)provisioningDictionaryFromFilePath:(NSString *)profilePath
+{
+    NSString *fileContents = [NSString stringWithContentsOfFile:profilePath encoding:NSASCIIStringEncoding error:nil];
+    NSUInteger fileLength = [fileContents length];
+    if (fileLength == 0)
+        fileContents = [NSString stringWithContentsOfFile:profilePath]; //if ascii doesnt work, have to use the deprecated (thankfully not obsolete!) method
+    
+    fileLength = [fileContents length];
+    if (fileLength == 0)
+        return nil;
+    
+    //find NSRange location of <?xml to pass by all the "garbage" data before our plist
+    
+    NSUInteger startingLocation = [fileContents rangeOfString:@"<?xml"].location;
+    
+    //find NSRange of the end of the plist (there is "junk" cert data after our plist info as well
+    NSRange endingRange = [fileContents rangeOfString:@"</plist>"];
+    
+    //adjust the location of endingRange to include </plist> into our newly trimmed string.
+    NSUInteger endingLocation = endingRange.location + endingRange.length;
+    
+    //offset the ending location to trim out the "garbage" before <?xml
+    NSUInteger endingLocationAdjusted = endingLocation - startingLocation;
+    
+    //create the final range of the string data from <?xml to </plist>
+    
+    NSRange plistRange = NSMakeRange(startingLocation, endingLocationAdjusted);
+    
+    //actually create our string!
+    NSString *plistString = [fileContents substringWithRange:plistRange];
+    
+    //yay categories!! convert the dictionary raw string into an actual NSDictionary
+    NSMutableDictionary *dict = [plistString dictionaryFromString];
+    
+    
+    NSString *appID = [dict[@"Entitlements"] objectForKey:@"application-identifier"];
+    
+    [dict setObject:appID forKey:@"applicationIdentifier"];
+    
+    //since we will always need this data, best to grab it here and make it part of the dictionary for easy re-use / validity check.
+    
+    NSString *ourID = [self validIDFromCerts:dict[@"DeveloperCertificates"]];
+    
+    if (ourID != nil)
+    {
+        [dict setValue:ourID forKey:@"CODE_SIGN_IDENTITY"];
+        //in THEORY should set the profile target to Debug or Release depending on if it finds "Developer:" string.
+        if ([ourID rangeOfString:@"Developer:"].location != NSNotFound)
+        {
+            [dict setValue:@"Debug" forKey:@"Target"];
+            
+        } else {
+            
+            [dict setValue:@"Release" forKey:@"Target"];
+        }
+    }
+    
+    //grab all the valid certs, for later logging / debugging for why a profile might be invalid
+    
+    NSArray *validCertIds = [self certIDsFromCerts:dict[@"DeveloperCertificates"]];
+    
+    [dict setValue:validCertIds forKey:@"CodeSignArray"];
+    
+    // shouldnt need this frivolous data any longer, we know which ID (if any) we have and have all the valid ones too
+    
+    [dict removeObjectForKey:@"DeveloperCertificates"];
+    
+    
+    
+    //write to file for debug / posterity
+    // [dict writeToFile:[[[self pwd] stringByAppendingPathComponent:dict[@"Name"]] stringByAppendingPathExtension:@"plist"] atomically:TRUE];
+    
+    return dict;
+}
+
++ (NSString *)validIDFromCerts:(NSArray *)devCerts
+{
+    NSArray *validDevCerts = [self devCertsFull];
+    for (NSData *devCert in devCerts)
+    {
+        for (NSString *currentValidCert in validDevCerts)
+        {
+            NSData *distroData = [currentValidCert dataUsingEncoding:NSUTF8StringEncoding];
+            NSRange searchRange = NSMakeRange(0, devCert.length);
+            NSRange dataRange = [devCert rangeOfData:distroData options:0 range:searchRange];
+            if (dataRange.location != NSNotFound)
+            {
+                DLog(@"found profile: %@", currentValidCert);
+                return currentValidCert;
+            }
+        }
+    }
+    return nil;
+}
+
++ (NSArray *)devCertsFull
+{
+    NSMutableArray *outputArray = [[NSMutableArray alloc ]init];
+    NSArray *securityReturn = [self returnForProcess:@"security find-identity -p codesigning -v"];
+    for (NSString *profileLine in securityReturn)
+    {
+        if (profileLine.length > 0)
+        {
+            NSArray *clips = [profileLine componentsSeparatedByString:@"\""];
+            if ([clips count] > 1)
+            {
+                NSString *clipIt = [[profileLine componentsSeparatedByString:@"\""] objectAtIndex:1];
+                [outputArray addObject:clipIt];
+            }
+        }
+        
+    }
+    return outputArray;
+}
+
++ (NSArray *)returnForProcess:(NSString *)call
+{
+    if (call==nil)
+        return 0;
+    char line[200];
+    
+    FILE* fp = popen([call UTF8String], "r");
+    NSMutableArray *lines = [[NSMutableArray alloc]init];
+    if (fp)
+    {
+        while (fgets(line, sizeof line, fp))
+        {
+            NSString *s = [NSString stringWithCString:line encoding:NSUTF8StringEncoding];
+            s = [s stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            [lines addObject:s];
+        }
+    }
+    pclose(fp);
+    return lines;
 }
 
 
