@@ -352,25 +352,28 @@ static NSString *appleTVAddress = nil;
                     }
                 }
                 
+               if (_firstDeviceID != nil)
+               {
+                   NSArray *provisionedDevices = _provisioningProfileDict[@"ProvisionedDevices"];
+                   if (![provisionedDevices containsObject:_firstDeviceID])
+                   {
+                       DLog(@"profile is missing first device udid!");
+                       NSAlert *theAlert = [NSAlert alertWithMessageText:@"Profile missing device UUID" defaultButton:@"Ignore" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"The UUID for the device '%@' is missing from this provisioning profile!\n\nIf this is the target device please update your provisioning profile to include the UUID:\n\n%@", _firstDevice[@"DeviceName"], _firstDeviceID];
+                       
+                       NSInteger modalRet = [theAlert runModal];
+                       if (modalRet != 1)
+                       {
+                           [self enableControls];
+                           [statusLabel setStringValue:@"Ready"];
+                           return;
+                       }
+                       
+                   } else {
+                       DLog(@"udid: %@ found!", _firstDeviceID);
+                   }
+               }
                 
                 
-                NSArray *provisionedDevices = _provisioningProfileDict[@"ProvisionedDevices"];
-                if (![provisionedDevices containsObject:_firstDeviceID])
-                {
-                    DLog(@"profile is missing first device udid!");
-                    NSAlert *theAlert = [NSAlert alertWithMessageText:@"Profile missing device UUID" defaultButton:@"Ignore" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"The UUID for the device '%@' is missing from this provisioning profile!\n\nIf this is the target device please update your provisioning profile to include the UUID:\n\n%@", _firstDevice[@"DeviceName"], _firstDeviceID];
-                    
-                    NSInteger modalRet = [theAlert runModal];
-                    if (modalRet != 1)
-                    {
-                        [self enableControls];
-                        [statusLabel setStringValue:@"Ready"];
-                        return;
-                    }
-                    
-                } else {
-                    DLog(@"udid: %@ found!", _firstDeviceID);
-                }
                 
                 
                 
