@@ -46,7 +46,11 @@ static NSString *kInfoPlistFilename                 = @"Info.plist";
 static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
 
 @interface iReSignAppDelegate()
-
+{
+    NSDictionary *_provisioningProfileDict;
+    NSDictionary *_firstDevice;
+    NSString *_firstDeviceID;
+}
 @property (nonatomic, strong) ATVDeviceController *deviceController;
 
 @end
@@ -59,8 +63,25 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
 
 static NSString *appleTVAddress = nil;
 
+
+- (NSArray *)deviceList
+{
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"afcclient" ofType:@"" inDirectory:@"mac_libs"];
+    NSArray *returns = [iReSignAppDelegate returnForProcess:[NSString stringWithFormat:@"%@ -l", path]];
+    NSString *string = [returns componentsJoinedByString:@"\n"];
+    return [string dictionaryFromString];
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
+    NSArray *devices = [self deviceList];
+    if (devices.count > 0)
+    {
+        _firstDevice =  devices[0];
+        _firstDeviceID = _firstDevice[@"UniqueDeviceID"];
+        DLog(@"_firstDevice: %@", _firstDevice);
+    }
+   
     [flurry setAlphaValue:0.5];
     
     defaults = [NSUserDefaults standardUserDefaults];
@@ -155,18 +176,18 @@ static NSString *appleTVAddress = nil;
     {
         NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
         NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
-        NSDictionary *profileDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:provisioningProfileFile];
-        DLog(@"profileDict: %@", profileDict);
-        if (![profileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
+        _provisioningProfileDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:provisioningProfileFile];
+        DLog(@"profileDict: %@", _provisioningProfileDict);
+        if (![_provisioningProfileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
         {
             
-            NSAlert *mismatchAlert = [NSAlert alertWithMessageText:@"Profile/Cert Mistmatch" defaultButton:@"Select Certificate" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"The selected certificate name: '%@' does not match the certificate in the provisioning profile! '%@'", selectedItem, profileDict[@"CODE_SIGN_IDENTITY"]];
+            NSAlert *mismatchAlert = [NSAlert alertWithMessageText:@"Profile/Cert Mistmatch" defaultButton:@"Select Certificate" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"The selected certificate name: '%@' does not match the certificate in the provisioning profile! '%@'", selectedItem, _provisioningProfileDict[@"CODE_SIGN_IDENTITY"]];
             
             //NSInteger index = [certComboBox indexOfItemWithObjectValue:profileDict[@"CODE_SIGN_IDENTITY"]];
             NSModalResponse returnValue =  [mismatchAlert runModal];
             if (returnValue == 1)
             {
-                NSInteger index = [self comboBox:certComboBox indexOfObjectValue:profileDict[@"CODE_SIGN_IDENTITY"]];
+                NSInteger index = [self comboBox:certComboBox indexOfObjectValue:_provisioningProfileDict[@"CODE_SIGN_IDENTITY"]];
                 if (index != NSNotFound)
                 {
                     [certComboBox selectItemAtIndex:index];
@@ -310,6 +331,51 @@ static NSString *appleTVAddress = nil;
             [self _getBundleID];
             
             NSLog(@"bundle id: %@", self.bundleID);
+            
+            if (_provisioningProfileDict != nil)
+            {
+                NSString *provBundleId = _provisioningProfileDict[@"Entitlements"][@"application-identifier"];
+                NSString *prefix = _provisioningProfileDict[@"ApplicationIdentifierPrefix"][0];
+                DLog(@"bundle id: %@ prefix: %@", provBundleId, prefix);
+                NSRange theRange = [provBundleId rangeOfString:[NSString stringWithFormat:@"%@.", prefix]];
+                NSInteger location = theRange.location + theRange.length;
+                NSString *rawbundle = [provBundleId substringFromIndex:location];
+                
+                //wildcard check
+                if ([rawbundle rangeOfString:@"*"].location == NSNotFound)
+                {
+                    //automagically set it!
+                    if (![self.bundleID isEqualToString:rawbundle])
+                    {
+                        [changeBundleIDCheckbox setState:NSOnState];
+                        bundleIDField.stringValue = rawbundle;
+                    }
+                }
+                
+                
+                
+                NSArray *provisionedDevices = _provisioningProfileDict[@"ProvisionedDevices"];
+                if (![provisionedDevices containsObject:_firstDeviceID])
+                {
+                    DLog(@"profile is missing first device udid!");
+                    NSAlert *theAlert = [NSAlert alertWithMessageText:@"Profile missing device UUID" defaultButton:@"Ignore" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"The UUID for the device '%@' is missing from this provisioning profile!\n\nIf this is the target device please update your provisioning profile to include the UUID:\n\n%@", _firstDevice[@"DeviceName"], _firstDeviceID];
+                    
+                    NSInteger modalRet = [theAlert runModal];
+                    if (modalRet != 1)
+                    {
+                        [self enableControls];
+                        [statusLabel setStringValue:@"Ready"];
+                        return;
+                    }
+                    
+                } else {
+                    DLog(@"udid: %@ found!", _firstDeviceID);
+                }
+                
+                
+                
+                
+            }
             
             if (changeBundleIDCheckbox.state == NSOnState) {
                 [self doBundleIDChange:bundleIDField.stringValue];

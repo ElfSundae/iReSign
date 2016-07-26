@@ -19,6 +19,7 @@
 		899877DD1CED5EA8006A639E /* libssl.0.9.8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DC1CED5EA8006A639E /* libssl.0.9.8.tbd */; };
 		899877DF1CED60A8006A639E /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DE1CED60A8006A639E /* libz.tbd */; };
 		899877E31CEE0198006A639E /* ATVDeviceController.m in Sources */ = {isa = PBXBuildFile; fileRef = 899877E21CEE0198006A639E /* ATVDeviceController.m */; };
+		89DAC4161D47452F001C5603 /* mac_libs in Resources */ = {isa = PBXBuildFile; fileRef = 89DAC4151D47452F001C5603 /* mac_libs */; };
 		C115EE2B13815024003B9ACC /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C115EE2A13815024003B9ACC /* Cocoa.framework */; };
 		C115EE3513815024003B9ACC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C115EE3313815024003B9ACC /* InfoPlist.strings */; };
 		C115EE3813815024003B9ACC /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C115EE3713815024003B9ACC /* main.m */; };
@@ -48,6 +49,7 @@
 		899877E11CEE0198006A639E /* ATVDeviceController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ATVDeviceController.h; sourceTree = "<group>"; };
 		899877E21CEE0198006A639E /* ATVDeviceController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ATVDeviceController.m; sourceTree = "<group>"; };
 		899877E51CEE02E0006A639E /* Defines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Defines.h; sourceTree = "<group>"; };
+		89DAC4151D47452F001C5603 /* mac_libs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = mac_libs; path = ../../mac_libs; sourceTree = "<group>"; };
 		C115EE2613815024003B9ACC /* iReSign.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iReSign.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C115EE2A13815024003B9ACC /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		C115EE2D13815024003B9ACC /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -183,6 +185,7 @@
 		C115EE3113815024003B9ACC /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				89DAC4151D47452F001C5603 /* mac_libs */,
 				C142472F1381B75B00F5B51F /* Icon.icns */,
 				C142471E138174E500F5B51F /* ResourceRules.plist */,
 				C115EE3213815024003B9ACC /* iReSign-Info.plist */,
@@ -248,6 +251,7 @@
 			files = (
 				C115EE3513815024003B9ACC /* InfoPlist.strings in Resources */,
 				C115EE4113815024003B9ACC /* MainMenu.xib in Resources */,
+				89DAC4161D47452F001C5603 /* mac_libs in Resources */,
 				C142471F138174E500F5B51F /* ResourceRules.plist in Resources */,
 				C14247301381B75B00F5B51F /* Icon.icns in Resources */,
 				899877D71CED5CFF006A639E /* todo.txt in Resources */,
