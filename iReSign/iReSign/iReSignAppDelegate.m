@@ -10,6 +10,27 @@
 #import "iReSignAppDelegate.h"
 #import "ATVDeviceController.h"
 
+@interface NSArray (profileHelper)
+
+- (NSArray *)subarrayWithName:(NSString *)theName;
+
+@end
+
+@implementation NSArray (profileHelper)
+
+
+//filter subarray based on what contacts have that particular name sorted ascending by creation date. used to easily sort the top most object as far as date created when doing profile comparisons
+
+- (NSArray *)subarrayWithName:(NSString *)theName
+{
+    NSPredicate *filterPredicate = [NSPredicate predicateWithFormat:@"(Name == %@)", theName];
+    NSSortDescriptor *sortDesc = [[NSSortDescriptor alloc] initWithKey:@"CreationDate" ascending:TRUE];
+    NSArray *filteredArray = [self filteredArrayUsingPredicate:filterPredicate];
+    return [filteredArray sortedArrayUsingDescriptors:@[sortDesc]];
+}
+
+@end
+
 @interface NSString (profileHelper)
 - (id)dictionaryFromString;
 @end
@@ -50,6 +71,8 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     NSDictionary *_provisioningProfileDict;
     NSDictionary *_firstDevice;
     NSString *_firstDeviceID;
+    NSArray *_validProfiles;
+    NSDictionary *_infoDict;
 }
 @property (nonatomic, strong) ATVDeviceController *deviceController;
 
@@ -82,6 +105,15 @@ static NSString *appleTVAddress = nil;
         DLog(@"_firstDevice: %@", _firstDevice);
     }
    
+    [self getValidProfilesWithCompletionBlock:^(NSArray *validProfiles) {
+        
+        //DLog(@"validProfiles; %@", validProfiles);
+        _validProfiles = validProfiles;
+        
+    }];
+    
+    
+    
     [flurry setAlphaValue:0.5];
     
     defaults = [NSUserDefaults standardUserDefaults];
@@ -1098,6 +1130,51 @@ static NSString *appleTVAddress = nil;
     return false;
 }
 
+- (void)extractInfoPlistFromFile:(NSString *)theFile
+{
+    NSString *proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -l %@ | grep .app/Info.plist", theFile];
+    NSString *returnFromUnzip = [[iReSignAppDelegate returnForProcess:proccessString] lastObject];
+    NSString *infoPlistPath = [[returnFromUnzip componentsSeparatedByString:@" "] lastObject];
+    proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -j -o %@ %@ -d %@", theFile, infoPlistPath, [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"]];
+    //DLog(@"processString: %@", proccessString);
+    [iReSignAppDelegate returnForProcess:proccessString];
+    NSString *outputFile = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/Info.plist"];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:outputFile])
+    {
+        _infoDict = [NSDictionary dictionaryWithContentsOfFile:outputFile];
+        NSPredicate *filterPredicate = [NSPredicate predicateWithFormat:@"(applicationIdentifier contains %@)", self.bundleID];
+        NSArray *filteredArray = [_validProfiles filteredArrayUsingPredicate:filterPredicate];
+        //DLog(@"filtered array: %@", filteredArray);
+        
+        if (filteredArray.count == 0)
+        {
+            filterPredicate = [NSPredicate predicateWithFormat:@"(applicationIdentifier contains %@)", @"*"];
+            filteredArray = [_validProfiles filteredArrayUsingPredicate:filterPredicate];
+            //DLog(@"wildcard filtered array: %@", filteredArray);
+            
+            if (_firstDeviceID.length > 0)
+            {
+                filterPredicate = [NSPredicate predicateWithFormat:@"(ProvisionedDevices contains %@)", _firstDeviceID];
+                filteredArray = [_validProfiles filteredArrayUsingPredicate:filterPredicate];
+                //DLog(@"device filtered array: %@", filteredArray);
+                if (filteredArray.count > 0)
+                {
+                    provisioningPathField.stringValue = filteredArray[0][@"Path"];
+                }
+            } else {
+                
+                if (filteredArray.count > 0)
+                {
+                    provisioningPathField.stringValue = filteredArray[0][@"Path"];
+                    
+                }
+                
+            }
+        }
+        
+    }
+ //proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -l %@ | grep .app/Info.plist", theFile];
+}
 
 
 - (IBAction)browse:(id)sender {
@@ -1113,6 +1190,14 @@ static NSString *appleTVAddress = nil;
     {
         NSString* fileNameOpened = [[[openDlg URLs] objectAtIndex:0] path];
         [pathField setStringValue:fileNameOpened];
+        
+        if ([[[fileNameOpened pathExtension] lowercaseString] isEqualToString:@"ipa"])
+        {
+             [self extractInfoPlistFromFile:fileNameOpened];
+        }
+        
+      
+        
     }
 }
 
@@ -1986,7 +2071,7 @@ static NSString *appleTVAddress = nil;
             NSRange dataRange = [devCert rangeOfData:distroData options:0 range:searchRange];
             if (dataRange.location != NSNotFound)
             {
-                DLog(@"found profile: %@", currentValidCert);
+                //DLog(@"found profile: %@", currentValidCert);
                 return currentValidCert;
             }
         }
@@ -2033,6 +2118,209 @@ static NSString *appleTVAddress = nil;
     }
     pclose(fp);
     return lines;
+}
+
+
+- (NSString *)provisioningProfilesPath
+{
+    return [NSHomeDirectory() stringByAppendingPathComponent:@"Library/MobileDevice/Provisioning Profiles"];
+}
+
+- (void)getValidProfilesWithCompletionBlock:(void(^)(NSArray *validProfiles))completionBlock
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        
+        @autoreleasepool {
+         
+            NSMutableArray *profileArray = [NSMutableArray new];
+            NSMutableArray *profileNames = [NSMutableArray new];
+            NSString *profileDir = [self provisioningProfilesPath];
+            NSArray *fileArray = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:profileDir error:nil];
+            for (NSString *theObject in fileArray)
+            {
+                if ([[[theObject pathExtension] lowercaseString] isEqualToString:@"mobileprovision"])
+                {
+                    NSString *fullPath = [profileDir stringByAppendingPathComponent:theObject];
+                    NSMutableDictionary *provisionDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:
+                                                          [profileDir stringByAppendingPathComponent:theObject]];
+                    
+                    NSString *csid = provisionDict[@"CODE_SIGN_IDENTITY"];
+                    NSDate *expireDate = provisionDict[@"ExpirationDate"];
+                    NSDate *createdDate = provisionDict[@"CreationDate"];
+                    NSString *name = provisionDict[@"Name"];
+                    [provisionDict setObject:fullPath forKey:@"Path"];
+                    BOOL expired = FALSE;
+                    
+                    if ([expireDate isGreaterThan:[NSDate date]])
+                    {
+                        //     DLog(@"not expired: %@", expireDate);
+                        
+                    } else {
+                        
+                        //its expired, who cares about any of the other details. add it to the expired list.
+                        
+                        DLog(@"expired: %@\n", expireDate);
+                        //[_expired addObject:provisionDict];
+                        expired = TRUE;
+                    }
+                    
+                    //check to see if our valid non expired certificates in our keychain are referenced by the profile, or if its expired
+                    
+                    if (csid == nil || expired == TRUE)
+                    {
+                        if (csid == nil)
+                        {
+                            
+                            DLog(@"No valid codesigning identities found!!");
+                            
+                        } else {
+                            
+                            DLog(@"invalid or expired cert: %@\n", theObject );
+                            
+                        }
+                    } else { //we got this far the profile is not expired and can be compared against other potential duplicates
+                        
+                        if ([profileNames containsObject:name]) //we have this profile already, is ours newer or is the one already in our collection newer?
+                        {
+                            NSDictionary *otherDict = [[profileArray subarrayWithName:name] objectAtIndex:0];
+                            NSDate *previousCreationDate = otherDict[@"CreationDate"];
+                            if ([previousCreationDate isGreaterThan:createdDate])
+                            {
+                                DLog(@"found repeat name, but we're older: %@ vs: %@\n", createdDate, previousCreationDate);
+                                //    [_duplicates addObject:provisionDict];
+                                
+                            } else {
+                                
+                                DLog(@"found a newer profile: %@ replace the old one: %@\n", createdDate, previousCreationDate);
+                                //   [_duplicates addObject:otherDict];
+                                [profileArray removeObject:otherDict];
+                                [profileArray addObject:provisionDict];
+                            }
+                            
+                        } else {
+                            
+                            //we dont have this name on record and it should be a valid profile!
+                            
+                            [profileArray addObject:provisionDict];
+                            [profileNames addObject:name];
+                            
+                        }
+                        
+                        
+                    }
+                }
+            }
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                
+                completionBlock(profileArray);
+                
+                
+                
+            });
+            
+            
+        }
+        
+    });
+}
+
+- (NSArray *)validProfiles
+{
+    NSMutableArray *profileArray = [NSMutableArray new];
+    NSMutableArray *profileNames = [NSMutableArray new];
+    //NSMutableArray *_invalids = [NSMutableArray new];
+    //NSMutableArray *_expired = [NSMutableArray new];
+   // NSMutableArray *_duplicates = [NSMutableArray new];
+    // NSArray *devCert = [self devCerts];
+    NSString *profileDir = [self provisioningProfilesPath];
+    NSArray *fileArray = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:profileDir error:nil];
+    for (NSString *theObject in fileArray)
+    {
+        if ([[[theObject pathExtension] lowercaseString] isEqualToString:@"mobileprovision"])
+        {
+            NSString *fullPath = [profileDir stringByAppendingPathComponent:theObject];
+            NSMutableDictionary *provisionDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:
+                                                  [profileDir stringByAppendingPathComponent:theObject]];
+            
+            NSString *csid = provisionDict[@"CODE_SIGN_IDENTITY"];
+            // NSString *teamId = [provisionDict[@"TeamIdentifier"] lastObject];
+            NSDate *expireDate = provisionDict[@"ExpirationDate"];
+            NSDate *createdDate = provisionDict[@"CreationDate"];
+            NSString *name = provisionDict[@"Name"];
+            [provisionDict setObject:fullPath forKey:@"Path"];
+            BOOL expired = FALSE;
+            
+            if ([expireDate isGreaterThan:[NSDate date]])
+            {
+                //     DLog(@"not expired: %@", expireDate);
+                
+            } else {
+                
+                //its expired, who cares about any of the other details. add it to the expired list.
+                
+                DLog(@"expired: %@\n", expireDate);
+                //[_expired addObject:provisionDict];
+                expired = TRUE;
+            }
+            
+            //check to see if our valid non expired certificates in our keychain are referenced by the profile, or if its expired
+            
+            if (csid == nil || expired == TRUE)
+            {
+                /*
+                if (![_expired containsObject:provisionDict])
+                {
+                    [_invalids addObject:provisionDict];
+                }
+                 */
+                if (csid == nil)
+                {
+                    
+                    DLog(@"No valid codesigning identities found!!");
+                    
+                } else {
+                    
+                    DLog(@"invalid or expired cert: %@\n", theObject );
+                    
+                }
+            } else { //we got this far the profile is not expired and can be compared against other potential duplicates
+                
+                if ([profileNames containsObject:name]) //we have this profile already, is ours newer or is the one already in our collection newer?
+                {
+                    NSDictionary *otherDict = [[profileArray subarrayWithName:name] objectAtIndex:0];
+                    NSDate *previousCreationDate = otherDict[@"CreationDate"];
+                    if ([previousCreationDate isGreaterThan:createdDate])
+                    {
+                        DLog(@"found repeat name, but we're older: %@ vs: %@\n", createdDate, previousCreationDate);
+                    //    [_duplicates addObject:provisionDict];
+                        
+                    } else {
+                        
+                        DLog(@"found a newer profile: %@ replace the old one: %@\n", createdDate, previousCreationDate);
+                     //   [_duplicates addObject:otherDict];
+                        [profileArray removeObject:otherDict];
+                        [profileArray addObject:provisionDict];
+                    }
+                    
+                } else {
+                    
+                    //we dont have this name on record and it should be a valid profile!
+                    
+                    [profileArray addObject:provisionDict];
+                    [profileNames addObject:name];
+                    
+                }
+                
+                
+            }
+        }
+    }
+    
+    
+    
+    return profileArray;
 }
 
 
