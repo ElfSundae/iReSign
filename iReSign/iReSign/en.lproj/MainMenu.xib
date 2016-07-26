@@ -307,16 +307,16 @@
         </menu>
         <window title="iReSign" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" showsToolbarButton="NO" animationBehavior="default" id="371">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES"/>
-            <rect key="contentRect" x="0.0" y="405" width="333" height="236"/>
+            <rect key="contentRect" x="0.0" y="405" width="495" height="236"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1028"/>
             <value key="minSize" type="size" width="333" height="201"/>
             <value key="maxSize" type="size" width="666" height="402"/>
             <view key="contentView" id="372">
-                <rect key="frame" x="0.0" y="0.0" width="333" height="236"/>
+                <rect key="frame" x="0.0" y="0.0" width="495" height="236"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <textField verticalHuggingPriority="750" id="533" customClass="IRTextFieldDrag">
-                        <rect key="frame" x="20" y="201" width="208" height="22"/>
+                        <rect key="frame" x="20" y="201" width="350" height="22"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="/path/to/app.ipa or /path/to/app.xcarchive" drawsBackground="YES" id="534">
                             <font key="font" metaFont="system"/>
@@ -328,7 +328,7 @@
                         </connections>
                     </textField>
                     <textField verticalHuggingPriority="750" id="543" customClass="IRTextFieldDrag">
-                        <rect key="frame" x="20" y="141" width="208" height="22"/>
+                        <rect key="frame" x="20" y="141" width="350" height="22"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="/path/to/entitlements.plist" drawsBackground="YES" id="544">
                             <font key="font" metaFont="system"/>
@@ -340,7 +340,7 @@
                         </connections>
                     </textField>
                     <button verticalHuggingPriority="750" id="535">
-                        <rect key="frame" x="230" y="194" width="96" height="32"/>
+                        <rect key="frame" x="382" y="194" width="96" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="push" title="Browse" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="536">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -352,7 +352,7 @@
                         </connections>
                     </button>
                     <textField verticalHuggingPriority="750" id="563" customClass="IRTextFieldDrag">
-                        <rect key="frame" x="20" y="171" width="208" height="22"/>
+                        <rect key="frame" x="20" y="171" width="350" height="22"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="/path/to/.mobileprovision" drawsBackground="YES" id="566">
                             <font key="font" metaFont="system"/>
@@ -364,7 +364,7 @@
                         </connections>
                     </textField>
                     <button verticalHuggingPriority="750" id="564">
-                        <rect key="frame" x="230" y="164" width="96" height="32"/>
+                        <rect key="frame" x="382.00000033435902" y="164" width="96" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="push" title="Browse" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="565">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -376,7 +376,7 @@
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" id="595">
-                        <rect key="frame" x="230" y="134" width="96" height="32"/>
+                        <rect key="frame" x="382.00000033435902" y="134" width="96" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="push" title="Browse" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="596">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -388,7 +388,7 @@
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" id="539">
-                        <rect key="frame" x="230" y="10" width="96" height="32"/>
+                        <rect key="frame" x="385" y="10" width="96" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="push" title="ReSign!" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="540">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -408,7 +408,7 @@
                         </textFieldCell>
                     </textField>
                     <comboBox verticalHuggingPriority="750" id="590">
-                        <rect key="frame" x="20" y="78" width="303" height="26"/>
+                        <rect key="frame" x="20" y="78" width="353" height="26"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <comboBoxCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" placeholderString="Select a signing certificate" drawsBackground="YES" completes="NO" usesDataSource="YES" numberOfVisibleItems="5" id="591">
                             <font key="font" metaFont="system"/>
@@ -426,7 +426,7 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                     </progressIndicator>
                     <textField verticalHuggingPriority="750" id="572" customClass="IRTextFieldDrag">
-                        <rect key="frame" x="20" y="110" width="208" height="22"/>
+                        <rect key="frame" x="20" y="110" width="350" height="22"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="com.companyname.appname" drawsBackground="YES" id="573">
                             <font key="font" metaFont="system"/>
@@ -438,7 +438,7 @@
                         </connections>
                     </textField>
                     <button id="574">
-                        <rect key="frame" x="234" y="112" width="88" height="18"/>
+                        <rect key="frame" x="386" y="112" width="88" height="18"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="check" title="Change ID" bezelStyle="regularSquare" imagePosition="left" inset="2" id="575">
                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -465,7 +465,7 @@
                         </connections>
                     </button>
                     <popUpButton verticalHuggingPriority="750" id="wwM-JB-d3j">
-                        <rect key="frame" x="158" y="45" width="165" height="26"/>
+                        <rect key="frame" x="208" y="45" width="165" height="26"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="xcv-Ao-SJQ" id="8j2-ph-gDM">
                             <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -488,12 +488,30 @@
                             </binding>
                         </connections>
                     </popUpButton>
+                    <button toolTip="Automatically selects a valid provisioning profile after an ipa is selected" id="7TG-MG-U6A">
+                        <rect key="frame" x="386" y="78" width="104" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Select Profile" bezelStyle="regularSquare" imagePosition="left" inset="2" id="eZy-aA-1lC">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="cUx-ea-pEu" name="value" keyPath="values.autoSelect" id="EhE-b0-kHc">
+                                <dictionary key="options">
+                                    <integer key="NSNoSelectionPlaceholder" value="0"/>
+                                    <integer key="NSNotApplicablePlaceholder" value="0"/>
+                                    <integer key="NSNullPlaceholder" value="0"/>
+                                    <bool key="NSValidatesImmediately" value="YES"/>
+                                </dictionary>
+                            </binding>
+                        </connections>
+                    </button>
                 </subviews>
             </view>
             <connections>
                 <outlet property="initialFirstResponder" destination="535" id="581"/>
             </connections>
-            <point key="canvasLocation" x="304.5" y="294"/>
+            <point key="canvasLocation" x="109.5" y="295"/>
         </window>
         <customObject id="494" customClass="iReSignAppDelegate">
             <connections>

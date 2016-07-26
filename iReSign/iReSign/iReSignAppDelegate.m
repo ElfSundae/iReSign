@@ -73,6 +73,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     NSString *_firstDeviceID;
     NSArray *_validProfiles;
     NSDictionary *_infoDict;
+    
 }
 @property (nonatomic, strong) ATVDeviceController *deviceController;
 
@@ -107,7 +108,7 @@ static NSString *appleTVAddress = nil;
    
     [self getValidProfilesWithCompletionBlock:^(NSArray *validProfiles) {
         
-        //DLog(@"validProfiles; %@", validProfiles);
+        DLog(@"validProfiles; %@", validProfiles);
         _validProfiles = validProfiles;
         
     }];
@@ -1130,28 +1131,55 @@ static NSString *appleTVAddress = nil;
     return false;
 }
 
-- (void)extractInfoPlistFromFile:(NSString *)theFile
+/**
+ 
+ This method runs unzip on the file twice, onces to get its file listings to root out *.app/Info.plist and 
+ the second time to pipe Info.plist into memory for our uses later.
+ 
+ */
+
+- (NSDictionary *)infoDictionaryFromIPA:(NSString *)theFile
 {
+    //get the path of the Info.plist file from the IPA
     NSString *proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -l %@ | grep .app/Info.plist", theFile];
+    //run process string
     NSString *returnFromUnzip = [[iReSignAppDelegate returnForProcess:proccessString] lastObject];
+    //isolate the actual Info.plist path in the archive
     NSString *infoPlistPath = [[returnFromUnzip componentsSeparatedByString:@" "] lastObject];
-    proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -j -o %@ %@ -d %@", theFile, infoPlistPath, [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"]];
+    //pipe the Info.plist into the return value
+    proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -j -p %@ %@", theFile, infoPlistPath];
     //DLog(@"processString: %@", proccessString);
-    [iReSignAppDelegate returnForProcess:proccessString];
-    NSString *outputFile = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/Info.plist"];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:outputFile])
+    return [[[iReSignAppDelegate returnForProcess:proccessString] componentsJoinedByString:@"\n"] dictionaryFromString];
+}
+
+/*
+ 
+ This method tries to capture the information of the Info.plist first and then checks our profiles
+ to see if one applies to the project using the bundleID if that fails it looks for wildcard profiles
+ 
+ 
+ */
+
+- (void)attemptAutoSelectProfileForIPA:(NSString *)theFile
+{
+    _infoDict = [self infoDictionaryFromIPA:theFile];
+    if (_infoDict != nil)
     {
-        _infoDict = [NSDictionary dictionaryWithContentsOfFile:outputFile];
+        //DLog(@"infoDict: %@", _infoDict);
+     
+        //the first check for profiles that have matching bundleID (applicationIdentifier)
+        
         NSPredicate *filterPredicate = [NSPredicate predicateWithFormat:@"(applicationIdentifier contains %@)", self.bundleID];
         NSArray *filteredArray = [_validProfiles filteredArrayUsingPredicate:filterPredicate];
         //DLog(@"filtered array: %@", filteredArray);
         
-        if (filteredArray.count == 0)
+        if (filteredArray.count == 0) //failed to find a profile with matching app id, search for wildcard
         {
             filterPredicate = [NSPredicate predicateWithFormat:@"(applicationIdentifier contains %@)", @"*"];
             filteredArray = [_validProfiles filteredArrayUsingPredicate:filterPredicate];
             //DLog(@"wildcard filtered array: %@", filteredArray);
             
+            //if there is a device plugged in we check to see if its deviceID exists in any of the valid profiles
             if (_firstDeviceID.length > 0)
             {
                 filterPredicate = [NSPredicate predicateWithFormat:@"(ProvisionedDevices contains %@)", _firstDeviceID];
@@ -1159,21 +1187,44 @@ static NSString *appleTVAddress = nil;
                 //DLog(@"device filtered array: %@", filteredArray);
                 if (filteredArray.count > 0)
                 {
-                    provisioningPathField.stringValue = filteredArray[0][@"Path"];
+                    _provisioningProfileDict = filteredArray[0];
+                    provisioningPathField.stringValue = _provisioningProfileDict[@"Path"];
+                   [self syncCertToProfile];
+                    
                 }
-            } else {
+            } else { //no devices plugged in or detected, just choose the first valid profile
+                
                 
                 if (filteredArray.count > 0)
                 {
-                    provisioningPathField.stringValue = filteredArray[0][@"Path"];
-                    
+                    _provisioningProfileDict = filteredArray[0];
+                    provisioningPathField.stringValue = _provisioningProfileDict[@"Path"];
+                    [self syncCertToProfile];
                 }
                 
             }
+        } else { //we did find a profile that matches the app id
+            _provisioningProfileDict = filteredArray[0];
+            provisioningPathField.stringValue = _provisioningProfileDict[@"Path"];
+            [self syncCertToProfile];
         }
         
     }
  //proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -l %@ | grep .app/Info.plist", theFile];
+}
+
+- (void)syncCertToProfile
+{
+    NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
+    NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
+    if (![_provisioningProfileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
+    {
+        NSInteger index = [self comboBox:certComboBox indexOfObjectValue:_provisioningProfileDict[@"CODE_SIGN_IDENTITY"]];
+        if (index != NSNotFound)
+        {
+            [certComboBox selectItemAtIndex:index];
+        }
+    }
 }
 
 
@@ -1191,11 +1242,14 @@ static NSString *appleTVAddress = nil;
         NSString* fileNameOpened = [[[openDlg URLs] objectAtIndex:0] path];
         [pathField setStringValue:fileNameOpened];
         
-        if ([[[fileNameOpened pathExtension] lowercaseString] isEqualToString:@"ipa"])
+        if ([[NSUserDefaults standardUserDefaults] boolForKey:@"autoSelect"] == YES)
         {
-             [self extractInfoPlistFromFile:fileNameOpened];
+            if ([[[fileNameOpened pathExtension] lowercaseString] isEqualToString:@"ipa"])
+            {
+                [self attemptAutoSelectProfileForIPA:fileNameOpened];
+                // [self extractInfoPlistFromFile:fileNameOpened];
+            }
         }
-        
       
         
     }
