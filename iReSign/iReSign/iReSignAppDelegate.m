@@ -10,11 +10,47 @@
 #import "iReSignAppDelegate.h"
 #import "ATVDeviceController.h"
 
+@interface NSString (TSSAdditions)
+
+- (id)dictionaryFromString;
+
+@end
+
+@implementation NSString (TSSAdditions)
+
+/*
+ 
+ we use this to convert a raw dictionary plist string into a proper NSDictionary
+ 
+ */
+
+- (id)dictionaryFromString
+{
+    NSError *error = nil;
+    NSPropertyListFormat format;
+    NSData *theData = [self dataUsingEncoding:NSASCIIStringEncoding allowLossyConversion:NO];
+    NSLog(@"theData: %@", theData);
+   id theDict = [NSPropertyListSerialization propertyListWithData:theData options:NSPropertyListImmutable format:&format error:&error];
+    
+    /*
+    id theDict = [NSPropertyListSerialization propertyListFromData:theData
+                                                  mutabilityOption:NSPropertyListImmutable
+                                                            format:&format
+                                                  errorDescription:&error];
+     */
+    NSLog(@"error: %@", error);
+    return theDict;
+}
+
+
+@end
+
 @interface NSArray (profileHelper)
 
 - (NSArray *)subarrayWithName:(NSString *)theName;
 
 @end
+
 
 @implementation NSArray (profileHelper)
 
@@ -33,11 +69,33 @@
 
 @interface NSString (profileHelper)
 - (id)dictionaryFromString;
+- (NSString *)plistSafeString;
 @end
 
 @implementation NSString (profileHelper)
 
 //convert basic XML plist string from the profile and convert it into a mutable nsdictionary
+
+- (NSString *)plistSafeString
+{
+    NSUInteger startingLocation = [self rangeOfString:@"<?xml"].location;
+    
+    //find NSRange of the end of the plist (there is "junk" cert data after our plist info as well
+    NSRange endingRange = [self rangeOfString:@"</plist>"];
+    
+    //adjust the location of endingRange to include </plist> into our newly trimmed string.
+    NSUInteger endingLocation = endingRange.location + endingRange.length;
+    
+    //offset the ending location to trim out the "garbage" before <?xml
+    NSUInteger endingLocationAdjusted = endingLocation - startingLocation;
+    
+    //create the final range of the string data from <?xml to </plist>
+    
+    NSRange plistRange = NSMakeRange(startingLocation, endingLocationAdjusted);
+    
+    //actually create our string!
+    return [self substringWithRange:plistRange];
+}
 
 - (id)dictionaryFromString
 {
@@ -48,6 +106,7 @@
                                                   mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                             format:&format
                                                   errorDescription:&error];
+    DLog(@"error: %@", error);
     return theDict;
 }
 
@@ -73,6 +132,7 @@ static NSString *kiTunesMetadataFileName            = @"iTunesMetadata";
     NSString *_firstDeviceID;
     NSArray *_validProfiles;
     NSDictionary *_infoDict;
+    NSString *exePath;
     
 }
 @property (nonatomic, strong) ATVDeviceController *deviceController;
@@ -108,19 +168,41 @@ static NSString *appleTVAddress = nil;
    
     [self getValidProfilesWithCompletionBlock:^(NSArray *validProfiles) {
         
-        DLog(@"validProfiles; %@", validProfiles);
+        //DLog(@"validProfiles; %@", validProfiles);
         _validProfiles = validProfiles;
         
     }];
     
+    //DLog(@"dcf: %@", [iReSignAppDelegate devCertsFull]);
     
+    
+    certComboBoxItems = [NSMutableArray arrayWithArray:[iReSignAppDelegate devCertsFull]];
+    
+    [certComboBox reloadData];
+    
+    
+    if ([defaults valueForKey:@"CERT_INDEX"]) {
+        
+        NSInteger selectedIndex = [[defaults valueForKey:@"CERT_INDEX"] integerValue];
+        if (selectedIndex != -1) {
+            NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
+            [certComboBox setObjectValue:selectedItem];
+            [certComboBox selectItemAtIndex:selectedIndex];
+        }
+        
+        [self enableControls];
+    } else {
+        NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:0];
+        [certComboBox setObjectValue:selectedItem];
+        [certComboBox selectItemAtIndex:0];
+    }
     
     [flurry setAlphaValue:0.5];
     
     defaults = [NSUserDefaults standardUserDefaults];
     
     // Look up available signing certificates
-    [self getCerts];
+   // [self getCerts];
     
     if ([defaults valueForKey:@"ENTITLEMENT_PATH"])
         [entitlementField setStringValue:[defaults valueForKey:@"ENTITLEMENT_PATH"]];
@@ -204,13 +286,14 @@ static NSString *appleTVAddress = nil;
      
      */
     
+    
     NSString *provisioningProfileFile = [provisioningPathField stringValue];
     if (provisioningProfileFile.length > 0) //if there is no provisioning profile, likey doing the self signing path.
     {
         NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
         NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
         _provisioningProfileDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:provisioningProfileFile];
-        DLog(@"profileDict: %@", _provisioningProfileDict);
+       // DLog(@"profileDict: %@", _provisioningProfileDict);
         if (![_provisioningProfileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
         {
             
@@ -674,7 +757,10 @@ static NSString *appleTVAddress = nil;
 
 - (void)doEntitlementsEdit
 {
-    NSDictionary* entitlements = entitlementsResult.propertyList;
+    DLog(@"entitlementsResultL %@", entitlementsResult);
+    NSDictionary* entitlements = [[entitlementsResult plistSafeString] dictionaryFromString];
+    
+    DLog(@"here: %@", entitlements);
     entitlements = entitlements[@"Entitlements"];
     NSString* filePath = [workingPath stringByAppendingPathComponent:@"entitlements.plist"];
     NSData *xmlData = [NSPropertyListSerialization dataWithPropertyList:entitlements format:NSPropertyListXMLFormat_v1_0 options:kCFPropertyListImmutable error:nil];
@@ -691,6 +777,7 @@ static NSString *appleTVAddress = nil;
 }
 
 - (void)doCodeSigning {
+    NSLog(@"doCodeSigning");
     appPath = nil;
     frameworksDirPath = nil;
     hasFrameworks = NO;
@@ -746,7 +833,10 @@ static NSString *appleTVAddress = nil;
             [self signFile:[frameworks lastObject]];
             [frameworks removeLastObject];
         } else {
-            [self signFile:appPath];
+            
+            
+            
+            [self signFile:[appPath stringByAppendingPathComponent:exePath]];
         }
     }
 }
@@ -755,7 +845,10 @@ static NSString *appleTVAddress = nil;
     NSLog(@"Codesigning %@", filePath);
     [statusLabel setStringValue:[NSString stringWithFormat:@"Codesigning %@",filePath]];
     
-    NSMutableArray *arguments = [NSMutableArray arrayWithObjects:@"-fs", [certComboBox objectValue], nil];
+    NSString *hashValue = [[certComboBoxItems objectAtIndex:[certComboBox indexOfSelectedItem]] valueForKey:@"hash"];
+    
+    //NSMutableArray *arguments = [NSMutableArray arrayWithObjects:@"-fs", [certComboBox objectValue], nil];
+    NSMutableArray *arguments = [NSMutableArray arrayWithObjects:@"-fs", hashValue, nil];
     NSDictionary *systemVersionDictionary = [NSDictionary dictionaryWithContentsOfFile:@"/System/Library/CoreServices/SystemVersion.plist"];
     NSString * systemVersion = [systemVersionDictionary objectForKey:@"ProductVersion"];
     NSArray * version = [systemVersion componentsSeparatedByString:@"."];
@@ -795,6 +888,8 @@ static NSString *appleTVAddress = nil;
     [codesignTask setLaunchPath:@"/usr/bin/codesign"];
     [codesignTask setArguments:arguments];
     
+    DLog(@"/usr/bin/codesign %@", [arguments componentsJoinedByString:@" "]);
+    
     [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(checkCodesigning:) userInfo:nil repeats:TRUE];
     
     
@@ -827,6 +922,7 @@ static NSString *appleTVAddress = nil;
         } else if (hasFrameworks) {
             hasFrameworks = NO;
             [self signFile:appPath];
+            //[self signFile:[appPath stringByAppendingPathComponent:exePath]];
         } else {
             NSLog(@"Codesigning done");
             [statusLabel setStringValue:@"Codesigning completed"];
@@ -875,6 +971,7 @@ static NSString *appleTVAddress = nil;
             [statusLabel setStringValue:@"Verification completed"];
             [self doZip];
         } else {
+            
             NSString *error = [[codesigningResult stringByAppendingString:@"\n\n"] stringByAppendingString:verificationResult];
             [self showAlertOfKind:NSCriticalAlertStyle WithTitle:@"Signing failed" AndMessage:error];
             [self enableControls];
@@ -1138,6 +1235,30 @@ static NSString *appleTVAddress = nil;
  
  */
 
+- (NSDictionary *)plistFromIPA:(NSString *)theFile withPath:(NSString *)path
+{
+    NSTask *swVers = [[NSTask alloc] init];
+    NSPipe *swp = [[NSPipe alloc] init];
+    NSFileHandle *swh = [swp fileHandleForReading];
+    [swVers setLaunchPath:@"/usr/bin/unzip"];
+    [swVers setArguments:@[@"-j", @"-p", theFile, path]];
+    [swVers setStandardOutput:swp];
+    [swVers setStandardError:swp];
+    [swVers launch];
+    [swVers waitUntilExit];
+    NSData *outData = nil;
+    outData = [swh readDataToEndOfFile];
+    NSString *error = nil;
+    NSPropertyListFormat format;
+    return [NSPropertyListSerialization propertyListFromData:outData
+                                     mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                               format:&format
+                                     errorDescription:&error];
+    
+   
+    
+}
+
 - (NSDictionary *)infoDictionaryFromIPA:(NSString *)theFile
 {
     //get the path of the Info.plist file from the IPA
@@ -1146,10 +1267,16 @@ static NSString *appleTVAddress = nil;
     NSString *returnFromUnzip = [[iReSignAppDelegate returnForProcess:proccessString] lastObject];
     //isolate the actual Info.plist path in the archive
     NSString *infoPlistPath = [[returnFromUnzip componentsSeparatedByString:@" "] lastObject];
+    DLog(@"infoPlistPath: %@", infoPlistPath);
     //pipe the Info.plist into the return value
+    
+    return [self plistFromIPA:theFile withPath:infoPlistPath];
     proccessString = [NSString stringWithFormat:@"/usr/bin/unzip -j -p %@ %@", theFile, infoPlistPath];
-    //DLog(@"processString: %@", proccessString);
-    return [[[iReSignAppDelegate returnForProcess:proccessString] componentsJoinedByString:@"\n"] dictionaryFromString];
+    
+    DLog(@"processString: %@", proccessString);
+    NSArray *returnPr = [iReSignAppDelegate returnForProcess:proccessString];
+    DLog(@"ReturnPR: %@", returnPr);
+    return [[returnPr componentsJoinedByString:@"\n"] dictionaryFromString];
 }
 
 /*
@@ -1162,10 +1289,13 @@ static NSString *appleTVAddress = nil;
 
 - (void)attemptAutoSelectProfileForIPA:(NSString *)theFile
 {
+    DLOG_SELF;
     _infoDict = [self infoDictionaryFromIPA:theFile];
+    //DLog(@"infoDicT: %@", _infoDict);
     if (_infoDict != nil)
     {
-        //DLog(@"infoDict: %@", _infoDict);
+        exePath = _infoDict[@"CFBundleExecutable"];
+        DLog(@"exePath: %@", exePath);
      
         //the first check for profiles that have matching bundleID (applicationIdentifier)
         
@@ -1341,12 +1471,14 @@ static NSString *appleTVAddress = nil;
 
 
 - (id)comboBox:(NSComboBox *)aComboBox objectValueForItemAtIndex:(NSInteger)index {
-    id item = nil;
+    NSDictionary *item = nil;
     if ([aComboBox isEqual:certComboBox]) {
         item = [certComboBoxItems objectAtIndex:index];
     }
-    return item;
+    return item[@"name"];
 }
+
+//obsolete
 
 - (void)getCerts {
     
@@ -2118,8 +2250,9 @@ static NSString *appleTVAddress = nil;
     NSArray *validDevCerts = [self devCertsFull];
     for (NSData *devCert in devCerts)
     {
-        for (NSString *currentValidCert in validDevCerts)
+        for (NSDictionary *currentValidCertDict in validDevCerts)
         {
+            NSString *currentValidCert = currentValidCertDict[@"name"];
             NSData *distroData = [currentValidCert dataUsingEncoding:NSUTF8StringEncoding];
             NSRange searchRange = NSMakeRange(0, devCert.length);
             NSRange dataRange = [devCert rangeOfData:distroData options:0 range:searchRange];
@@ -2136,16 +2269,27 @@ static NSString *appleTVAddress = nil;
 + (NSArray *)devCertsFull
 {
     NSMutableArray *outputArray = [[NSMutableArray alloc ]init];
-    NSArray *securityReturn = [self returnForProcess:@"security find-identity -p codesigning -v"];
+    NSArray *securityReturn = [self returnForProcess:@"security find-identity -p codesigning"];
+    //DLog(@"securityReturn: %@", securityReturn);
     for (NSString *profileLine in securityReturn)
     {
+        //DLog(@"profileLine: %@", profileLine);
         if (profileLine.length > 0)
         {
             NSArray *clips = [profileLine componentsSeparatedByString:@"\""];
             if ([clips count] > 1)
             {
-                NSString *clipIt = [[profileLine componentsSeparatedByString:@"\""] objectAtIndex:1];
-                [outputArray addObject:clipIt];
+                NSString *hash = [[[clips objectAtIndex:0] componentsSeparatedByString:@" "] objectAtIndex:1];
+                //DLog(@"hash: %@", hash);
+                
+                NSString *name = [clips objectAtIndex:1];
+                
+                NSDictionary *certDict = @{@"hash": hash, @"name": name};
+                
+                if (![outputArray containsObject:certDict])
+                {
+                    [outputArray addObject:certDict];
+                }
             }
         }
         
@@ -2280,102 +2424,7 @@ static NSString *appleTVAddress = nil;
     });
 }
 
-- (NSArray *)validProfiles
-{
-    NSMutableArray *profileArray = [NSMutableArray new];
-    NSMutableArray *profileNames = [NSMutableArray new];
-    //NSMutableArray *_invalids = [NSMutableArray new];
-    //NSMutableArray *_expired = [NSMutableArray new];
-   // NSMutableArray *_duplicates = [NSMutableArray new];
-    // NSArray *devCert = [self devCerts];
-    NSString *profileDir = [self provisioningProfilesPath];
-    NSArray *fileArray = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:profileDir error:nil];
-    for (NSString *theObject in fileArray)
-    {
-        if ([[[theObject pathExtension] lowercaseString] isEqualToString:@"mobileprovision"])
-        {
-            NSString *fullPath = [profileDir stringByAppendingPathComponent:theObject];
-            NSMutableDictionary *provisionDict = [iReSignAppDelegate provisioningDictionaryFromFilePath:
-                                                  [profileDir stringByAppendingPathComponent:theObject]];
-            
-            NSString *csid = provisionDict[@"CODE_SIGN_IDENTITY"];
-            // NSString *teamId = [provisionDict[@"TeamIdentifier"] lastObject];
-            NSDate *expireDate = provisionDict[@"ExpirationDate"];
-            NSDate *createdDate = provisionDict[@"CreationDate"];
-            NSString *name = provisionDict[@"Name"];
-            [provisionDict setObject:fullPath forKey:@"Path"];
-            BOOL expired = FALSE;
-            
-            if ([expireDate isGreaterThan:[NSDate date]])
-            {
-                //     DLog(@"not expired: %@", expireDate);
-                
-            } else {
-                
-                //its expired, who cares about any of the other details. add it to the expired list.
-                
-                DLog(@"expired: %@\n", expireDate);
-                //[_expired addObject:provisionDict];
-                expired = TRUE;
-            }
-            
-            //check to see if our valid non expired certificates in our keychain are referenced by the profile, or if its expired
-            
-            if (csid == nil || expired == TRUE)
-            {
-                /*
-                if (![_expired containsObject:provisionDict])
-                {
-                    [_invalids addObject:provisionDict];
-                }
-                 */
-                if (csid == nil)
-                {
-                    
-                    DLog(@"No valid codesigning identities found!!");
-                    
-                } else {
-                    
-                    DLog(@"invalid or expired cert: %@\n", theObject );
-                    
-                }
-            } else { //we got this far the profile is not expired and can be compared against other potential duplicates
-                
-                if ([profileNames containsObject:name]) //we have this profile already, is ours newer or is the one already in our collection newer?
-                {
-                    NSDictionary *otherDict = [[profileArray subarrayWithName:name] objectAtIndex:0];
-                    NSDate *previousCreationDate = otherDict[@"CreationDate"];
-                    if ([previousCreationDate isGreaterThan:createdDate])
-                    {
-                        DLog(@"found repeat name, but we're older: %@ vs: %@\n", createdDate, previousCreationDate);
-                    //    [_duplicates addObject:provisionDict];
-                        
-                    } else {
-                        
-                        DLog(@"found a newer profile: %@ replace the old one: %@\n", createdDate, previousCreationDate);
-                     //   [_duplicates addObject:otherDict];
-                        [profileArray removeObject:otherDict];
-                        [profileArray addObject:provisionDict];
-                    }
-                    
-                } else {
-                    
-                    //we dont have this name on record and it should be a valid profile!
-                    
-                    [profileArray addObject:provisionDict];
-                    [profileNames addObject:name];
-                    
-                }
-                
-                
-            }
-        }
-    }
-    
-    
-    
-    return profileArray;
-}
+
 
 
 @end
