@@ -782,7 +782,19 @@ static NSString *appleTVAddress = nil;
     frameworksDirPath = nil;
     hasFrameworks = NO;
     frameworks = [[NSMutableArray alloc] init];
+    /*
+    NSString *path = [workingPath stringByAppendingPathComponent:kPayloadDirName];
+    DLog(@"path: %@", path);
     
+    NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[workingPath stringByAppendingPathComponent:kPayloadDirName] error:nil];
+    
+     for (NSString *file in dirContents) {
+     if ([[[file pathExtension] lowercaseString] isEqualToString:@"app"]) {
+         appPath = [[workingPath stringByAppendingPathComponent:kPayloadDirName] stringByAppendingPathComponent:file];
+         appName = file;
+     }
+     }
+     */
     NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[workingPath stringByAppendingPathComponent:kPayloadDirName] error:nil];
     
     for (NSString *file in dirContents) {
@@ -827,6 +839,33 @@ static NSString *appleTVAddress = nil;
             break;
         }
     }
+    
+    
+    
+    
+    
+        //NSString *thePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Kodi.app"];
+        NSFileManager *man = [NSFileManager defaultManager];
+        NSArray *fileArray = [man subpathsOfDirectoryAtPath:appPath error:nil];
+        NSArray *signedExtensions = @[@"py", @"so", @"dylib", @"appex"];
+        for (NSString *file in fileArray)
+        {
+            NSString *lcpe = [[file pathExtension] lowercaseString];
+            if ([signedExtensions containsObject:lcpe] || [man isExecutableFileAtPath:file])
+            {
+                NSString *fullFile = [appPath stringByAppendingPathComponent:file];
+                [frameworks addObject:fullFile];
+            }
+        }
+        
+        
+        
+     
+    
+    
+    
+    NSLog(@"frameworks: %@ count: %lu", frameworks, frameworks.count);
+    
     
     if (appPath) {
         if (hasFrameworks) {

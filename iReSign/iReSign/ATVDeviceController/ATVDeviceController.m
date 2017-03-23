@@ -290,7 +290,7 @@
 }
 
 #if TARGET_OS_OSX
-
+/*
 - (NSString *)input: (NSString *)prompt defaultValue: (NSString *)defaultValue {
 	NSAlert *alert = [NSAlert alertWithMessageText: prompt
 									 defaultButton:@"OK"
@@ -316,6 +316,7 @@
 		return nil;
 	}
 }
+ */
 #endif
 
 - (void)netServiceBrowser:(NSNetServiceBrowser *)aNetServiceBrowser didRemoveService:(NSNetService *)aNetService moreComing:(BOOL)moreComing {
