@@ -106,7 +106,7 @@
                                                   mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                             format:&format
                                                   errorDescription:&error];
-    DLog(@"error: %@", error);
+    //DLog(@"error: %@", error);
     return theDict;
 }
 
@@ -261,6 +261,7 @@ static NSString *appleTVAddress = nil;
 
 - (BOOL)profileMatchesCert
 {
+  
     NSString *provisioningProfileFile = [provisioningPathField stringValue];
     if (provisioningProfileFile.length == 0) //
     {
@@ -835,7 +836,7 @@ static NSString *appleTVAddress = nil;
                 }
             }
             
-            [statusLabel setStringValue:[NSString stringWithFormat:@"Codesigning %@",file]];
+            [statusLabel setStringValue:[NSString stringWithFormat:@"Codesigning %@",file.lastPathComponent]];
             break;
         }
     }
@@ -882,7 +883,7 @@ static NSString *appleTVAddress = nil;
 
 - (void)signFile:(NSString*)filePath {
     NSLog(@"Codesigning %@", filePath);
-    [statusLabel setStringValue:[NSString stringWithFormat:@"Codesigning %@",filePath]];
+    [statusLabel setStringValue:[NSString stringWithFormat:@"Codesigning %@",filePath.lastPathComponent]];
     
     NSString *hashValue = [[certComboBoxItems objectAtIndex:[certComboBox indexOfSelectedItem]] valueForKey:@"hash"];
     
@@ -1065,7 +1066,9 @@ static NSString *appleTVAddress = nil;
         
         NSString *result = [[codesigningResult stringByAppendingString:@"\n\n"] stringByAppendingString:verificationResult];
         NSLog(@"Codesigning result: %@",result);
-        
+        [statusLabel setStringValue:@"Finished"];
+        [self enableControls];
+        /*
         
         [statusLabel setStringValue:@"Checking for AppSync unified..."];
         
@@ -1101,7 +1104,7 @@ static NSString *appleTVAddress = nil;
             [self enableControls];
         }
         
-        
+        */
         
         
         
@@ -1357,8 +1360,11 @@ static NSString *appleTVAddress = nil;
                 if (filteredArray.count > 0)
                 {
                     _provisioningProfileDict = filteredArray[0];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                    
                     provisioningPathField.stringValue = _provisioningProfileDict[@"Path"];
                    [self syncCertToProfile];
+                        });
                     
                 }
             } else { //no devices plugged in or detected, just choose the first valid profile
@@ -1384,16 +1390,24 @@ static NSString *appleTVAddress = nil;
 
 - (void)syncCertToProfile
 {
-    NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
-    NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
-    if (![_provisioningProfileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
-    {
-        NSInteger index = [self comboBox:certComboBox indexOfObjectValue:_provisioningProfileDict[@"CODE_SIGN_IDENTITY"]];
-        if (index != NSNotFound)
+  
+        NSInteger selectedIndex = [certComboBox indexOfSelectedItem];
+        DLog(@"selected index: %lu", selectedIndex);
+        NSString *selectedItem = [self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex];
+        DLog(@"selected item: %@", selectedItem);
+    DLog(@"prov %@", _provisioningProfileDict[@"CODE_SIGN_IDENTITY"] );
+        if (![_provisioningProfileDict[@"CODE_SIGN_IDENTITY"] isEqualToString:selectedItem])
         {
-            [certComboBox selectItemAtIndex:index];
+            NSInteger index = [self comboBox:certComboBox indexOfObjectValue:_provisioningProfileDict[@"CODE_SIGN_IDENTITY"]];
+            DLog(@"index: %lu", index);
+            if (index != NSNotFound)
+            {
+                DLog(@"selecting it and shit");
+                [certComboBox selectItemAtIndex:index];
+            }
         }
-    }
+    
+   
 }
 
 
@@ -1415,7 +1429,10 @@ static NSString *appleTVAddress = nil;
         {
             if ([[[fileNameOpened pathExtension] lowercaseString] isEqualToString:@"ipa"])
             {
-                [self attemptAutoSelectProfileForIPA:fileNameOpened];
+               // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+                    [self attemptAutoSelectProfileForIPA:fileNameOpened];
+               // });
+                
                 // [self extractInfoPlistFromFile:fileNameOpened];
             }
         }
@@ -1505,6 +1522,14 @@ static NSString *appleTVAddress = nil;
 
 - (NSInteger)comboBox:(NSComboBox *)aComboBox indexOfObjectValue:(NSString *)objectValue
 {
+    //[self comboBox:certComboBox objectValueForItemAtIndex:selectedIndex]
+    int i = 0;
+    for (i = 0; i < aComboBox.numberOfItems; i++){
+        NSString * value = [self comboBox:certComboBox objectValueForItemAtIndex:i];
+        if ([value isEqualToString:objectValue]){
+            return i;
+        }
+    }
     return [certComboBoxItems indexOfObject:objectValue];
 }
 
@@ -1784,15 +1809,23 @@ static NSString *appleTVAddress = nil;
             NSString *newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.lzma"];
             if (![FM fileExistsAtPath:newPath])
             {
-                NSLog(@"no lzma file found, looking for gz");
+                NSLog(@"no lzma file found, looking for xz");
+                newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.xz"];
+            }
+            if (![FM fileExistsAtPath:newPath])
+            {
+                NSLog(@"no xz file found, looking for gz");
                 newPath = [tmpPath stringByAppendingPathComponent:@"data.tar.gz"];
             }
             
+            
             if ([FM fileExistsAtPath:newPath])
             {
+                
+                
                 NSLog(@"found archive: %@", newPath);
                 NSString *ext = [[newPath pathExtension] lowercaseString];
-                if ([ext isEqualToString:@"lzma"])
+                if ([ext isEqualToString:@"lzma"] || [ext isEqualToString:@"xz"])
                 {
                     status = [self extractLZMA:newPath toPath:tmpPath];
                 } else {
@@ -1801,7 +1834,7 @@ static NSString *appleTVAddress = nil;
                 
                 //check to see if there is an Applications folder, otherwise this deb is useless.
                 
-                NSString *applicationDir = [tmpPath stringByAppendingPathComponent:@"Applications"];
+                NSString *applicationDir = [tmpPath stringByAppendingPathComponent:@"private/var/mobile/Applications"];
                 if ([FM fileExistsAtPath:applicationDir])
                 {
                     

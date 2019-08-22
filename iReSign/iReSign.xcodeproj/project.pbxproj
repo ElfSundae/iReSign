@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		327FE115230E743D0055B3FA /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 327FE113230E743D0055B3FA /* libcrypto.a */; };
+		327FE116230E743D0055B3FA /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 327FE114230E743D0055B3FA /* libssl.a */; };
 		4C8EAD45185B74B90095DC6B /* IRHelpWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C8EAD44185B74B90095DC6B /* IRHelpWindow.m */; };
 		5B9E4C4C166AB3F7006D9F8F /* IRTextFieldDrag.m in Sources */ = {isa = PBXBuildFile; fileRef = 5B9E4C4B166AB3F7006D9F8F /* IRTextFieldDrag.m */; };
 		899877D31CED5CFF006A639E /* EMKeychainItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 899877CA1CED5CFF006A639E /* EMKeychainItem.m */; };
@@ -15,8 +17,6 @@
 		899877D61CED5CFF006A639E /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = 899877D11CED5CFF006A639E /* README.md */; };
 		899877D71CED5CFF006A639E /* todo.txt in Resources */ = {isa = PBXBuildFile; fileRef = 899877D21CED5CFF006A639E /* todo.txt */; };
 		899877D91CED5E8D006A639E /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877D81CED5E8C006A639E /* Security.framework */; };
-		899877DB1CED5E9A006A639E /* libcrypto.0.9.8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DA1CED5E9A006A639E /* libcrypto.0.9.8.tbd */; };
-		899877DD1CED5EA8006A639E /* libssl.0.9.8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DC1CED5EA8006A639E /* libssl.0.9.8.tbd */; };
 		899877DF1CED60A8006A639E /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 899877DE1CED60A8006A639E /* libz.tbd */; };
 		899877E31CEE0198006A639E /* ATVDeviceController.m in Sources */ = {isa = PBXBuildFile; fileRef = 899877E21CEE0198006A639E /* ATVDeviceController.m */; };
 		89DAC4161D47452F001C5603 /* mac_libs in Resources */ = {isa = PBXBuildFile; fileRef = 89DAC4151D47452F001C5603 /* mac_libs */; };
@@ -30,6 +30,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		327FE113230E743D0055B3FA /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = iReSign/ObjSSH/lib/libcrypto.a; sourceTree = "<group>"; };
+		327FE114230E743D0055B3FA /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = iReSign/ObjSSH/lib/libssl.a; sourceTree = "<group>"; };
 		4C8EAD43185B74B90095DC6B /* IRHelpWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IRHelpWindow.h; sourceTree = "<group>"; };
 		4C8EAD44185B74B90095DC6B /* IRHelpWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IRHelpWindow.m; sourceTree = "<group>"; };
 		5B9E4C4A166AB3F7006D9F8F /* IRTextFieldDrag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IRTextFieldDrag.h; sourceTree = "<group>"; };
@@ -74,9 +76,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				899877DF1CED60A8006A639E /* libz.tbd in Frameworks */,
-				899877DD1CED5EA8006A639E /* libssl.0.9.8.tbd in Frameworks */,
-				899877DB1CED5E9A006A639E /* libcrypto.0.9.8.tbd in Frameworks */,
 				899877D91CED5E8D006A639E /* Security.framework in Frameworks */,
+				327FE115230E743D0055B3FA /* libcrypto.a in Frameworks */,
+				327FE116230E743D0055B3FA /* libssl.a in Frameworks */,
 				C115EE2B13815024003B9ACC /* Cocoa.framework in Frameworks */,
 				899877D41CED5CFF006A639E /* libssh2.a in Frameworks */,
 			);
@@ -144,6 +146,8 @@
 		C115EE2913815024003B9ACC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				327FE113230E743D0055B3FA /* libcrypto.a */,
+				327FE114230E743D0055B3FA /* libssl.a */,
 				899877DE1CED60A8006A639E /* libz.tbd */,
 				899877DC1CED5EA8006A639E /* libssl.0.9.8.tbd */,
 				899877DA1CED5E9A006A639E /* libcrypto.0.9.8.tbd */,
@@ -368,6 +372,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -391,6 +396,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
